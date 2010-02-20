@@ -410,6 +410,8 @@ end
 # MAP
 
 class Map
+    
+    include TronUtils
 
 	attr_reader :width, :height, :my_position, :rival_position, :history
 	
@@ -445,7 +447,10 @@ class Map
 			#read the representation of the board
 			lines = []
 			@height.times do
-				lines += [$stdin.readline("\n").strip]
+                l = $stdin.readline("\n").chomp
+                l.gsub!( /^(\s*)(.*)(\s*)$/ ) { ('#' * $1.length) + $2 + ( '#' * $3.length ) }
+				lines << l
+                think "Readline '#{lines.last}' (l=#{lines.last.length})"
 			end
 			board = lines.join("")
 			
@@ -529,7 +534,8 @@ class Map
             cl.concat fl[x, 1]
             rl.concat fl[x+1, @width-x-1]
         end
-
+        
+        s = Array.new
         s[1] = ll[0,x*y].nils_count
         s[2] = cl[0,y].nils_count
         s[3] = rl[0,y*(@width-x-1)].nils_count
