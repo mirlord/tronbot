@@ -11,7 +11,7 @@ LOG_DIR=./log
 MAP=$KIT_DIR/maps/empty-room.txt
 #MAP=$KIT_DIR/maps/playground.txt
 
-MYBOT_FILE=./MyTronBot.rb
+MYBOT_FILE=./MirlordBot.rb
 MYBOT_CMD="ruby $MYBOT_FILE --debug"
 
 #RIVAL_FILE=$KIT_DIR/example_bots/Chaser.jar
@@ -19,6 +19,8 @@ MYBOT_CMD="ruby $MYBOT_FILE --debug"
 #RIVAL_FILE=$KIT_DIR/example_bots/RunAway.jar
 RIVAL_FILE=$KIT_DIR/example_bots/WallHugger.jar
 RIVAL_CMD="$JAVA_CMD -jar $RIVAL_FILE"
+
+export SAFE=3
 
 $JAVA_CMD -jar $KIT_DIR/engine/Tron.jar $MAP "$MYBOT_CMD" "$RIVAL_CMD" | tee $LOG_DIR/fight.log
 
