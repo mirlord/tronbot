@@ -15,6 +15,7 @@ class Map
 		@walls = []
 		@my_position = [-1,-1]
 		@rival_position = [-1,-1]
+        @points = nil
 		
 		read_map
 		
@@ -29,6 +30,8 @@ class Map
 			width, height = firstline.split(" ")
 			@width = width.to_i
 			@height = height.to_i
+
+            @points = Array.new( @width ) { Array.new( @height ) }
 			
 			#check for properly formatted width, height
 			if height == 0 or width == 0
@@ -145,7 +148,7 @@ class Map
         end
 
         # debug assertions
-        think "Space: #{s[1]} + #{s[2]} + #{s[3]} + #{s[4]} + #{s[5]} + #{s[6]} + #{s[7]} + #{s[8]} = #{s[0]}"
+        #think "Space: #{s[1]} + #{s[2]} + #{s[3]} + #{s[4]} + #{s[5]} + #{s[6]} + #{s[7]} + #{s[8]} = #{s[0]}"
         return s
     end
 
@@ -153,7 +156,18 @@ class Map
 		return true if x < 0 or y < 0 or x >= @width or y >= @height
 		return @walls[x+@width*y]
 	end
-	
+
+    def p( x, y, withwalls = false )
+        return nil if x.outside?( 0, @width-1 ) || y.outside?( 0, @height-1 )
+        if ! self.wall?(x,y) || withwalls
+            unless @points[x][y].nil?
+                @points[x][y]
+            else
+                @points[x][y] = Point.new( self, x, y )
+            end
+        end
+    end
+
 	def to_string()
 
 		out = ""

@@ -8,13 +8,14 @@ LOG_DIR=./log
 
 [ -d $LOG_DIR ] || mkdir -p $LOG_DIR
 
-MAP=$KIT_DIR/maps/apocalyptic.txt
+MAP=./test/maps/space_test.txt
+#MAP=$KIT_DIR/maps/apocalyptic.txt
 #MAP=$KIT_DIR/maps/empty-room.txt
 #MAP=$KIT_DIR/maps/playground.txt
 
 MYBOT_FILE=./lib/main.rb
 #MYBOT_FILE=$KIT_DIR/MyTronBot.rb
-MYBOT_CMD="ruby $MYBOT_FILE --debug --safe"
+MYBOT_CMD="ruby $MYBOT_FILE --debug"
 
 RIVAL_FILE=$KIT_DIR/example_bots/Chaser.jar
 #RIVAL_FILE=$KIT_DIR/example_bots/RandomBot.jar

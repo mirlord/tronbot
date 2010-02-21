@@ -1,5 +1,6 @@
 
 require 'lib/utils'
+require 'lib/space'
 
 class MirlordBot
 
@@ -14,7 +15,7 @@ class MirlordBot
 		if valids.nsize == 0
 			map.make_move( 0 )
 		else
-            collect_weights( map, valids )
+            collect_weights( map, valids ) unless valids.nsize < 2
 
             m = valids.choose
             m = valids[ rand(valids.size) ] if m.nil? # sometimes we can't choose any move
@@ -38,6 +39,15 @@ class MirlordBot
         if valids.opposite?
             dichotomy( map, valids )
         end
+    end
+
+    def analyze_limited_space( map, valids )
+        sws = SpaceWidthSearch.new
+        valids.each do |m|
+            sws.add_starting_point( m.dst )
+        end
+        spaces = sws.execute
+        think "Spaces merged into one" if spaces.size == 1
     end
 
     def try_to_keep_direction( map, valids )
@@ -80,7 +90,7 @@ class MirlordBot
         # it *could* be done quicker, but not significantly, I guess
         valids.each do |m|
             s = m.space
-            w = s * 100 / (s + m.respace)
+            w = s / (s + m.respace)
             valids[ m.index ].add_weight( w )
         end
     end

@@ -1,7 +1,14 @@
+
+require 'lib/utils'
+
 class Point
+
+    include TronUtils
 
     attr_reader :x, :y
 
+    # Don't use it directly!!!
+    # Use Map::p( x, y ) or Point::sibling( direction ) or Point::(north|east|west|south)
     def initialize( map, x, y )
         @map = map
         @x = x
@@ -9,20 +16,34 @@ class Point
         @space = nil
     end
 
-    def north
-        Point.new( @map, @x, @y - 1 ) unless @y == 0
+    def sibling( direction, withwalls = true )
+        self.method( direction ).call( withwalls )
     end
 
-    def south
-        Point.new( @map, @x, @y + 1 ) unless @y == @map.height
+    def siblings( withwalls = true )
+        [ self.north( withwalls ), self.east( withwalls ), self.south( withwalls ), self.west( withwalls ) ]
     end
 
-    def west
-        Point.new( @map, @x - 1, @y ) unless @x == 0
+    def north( withwalls = true )
+        think "Somebody wants go NORTH from #{self}"
+        n = @map.p( @x, @y - 1, withwalls )
+        think "He goes #{n}"
+        return n
     end
 
-    def east
-        Point.new( @map, @x + 1, @y ) unless @y == @map.width
+    def south( withwalls = true )
+        @map.p( @x, @y + 1, withwalls )
+    end
+
+    def west( withwalls = true )
+        think "Somebody wants go WEST from #{self}"
+        n = @map.p( @x - 1, @y, withwalls )
+        think "He goes #{n}"
+        return n
+    end
+
+    def east( withwalls = true )
+        @map.p( @x + 1, @y, withwalls )
     end
 
     def space( direction_name )
@@ -42,12 +63,24 @@ class Point
         end
     end
 
+    def wall?
+        @map.wall?( @x, @y )
+    end
+
     def inspect
         to_s
     end
 
     def to_s
         "<x=#{@x}; y=#{@y}>"
+    end
+
+    def eql?( comp )
+        self.x == comp.x && self.y == comp.y
+    end
+
+    def ==( comp )
+        self.eql?( comp )
     end
 
 end

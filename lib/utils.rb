@@ -5,6 +5,25 @@ def debug?
     ARGV.include?( '--debug' )
 end
 
+class Fixnum
+
+    # @return [true] if inside range, inclusively
+    def inside_i?( from, to )
+        # <= & >= more optimal, but less beautiful :)
+        inside_e?( from, to ) || self == from || self == to
+    end
+
+    # @return [true] if inside range, exclusively
+    def inside_e?( from, to )
+        self > from && self < to
+    end
+
+    def outside?( from, to )
+        ! inside_i?( from, to )
+    end
+
+end
+
 class Array
 
     # Returns the number of nil elements in self. May be zero.

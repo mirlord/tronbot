@@ -132,6 +132,10 @@ class Move
         "#{self.name} | from #{@src}, to #{@dst} | w: [#{@weights.join(' * ')}] = #{self.weight}"
     end
 
+    def name
+        :self.class.lowercase
+    end
+
 end
 
 class North < Move
