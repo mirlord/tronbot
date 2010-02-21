@@ -12,14 +12,14 @@ MAP=$KIT_DIR/maps/apocalyptic.txt
 #MAP=$KIT_DIR/maps/empty-room.txt
 #MAP=$KIT_DIR/maps/playground.txt
 
-MYBOT_FILE=./MirlordBot.rb
+MYBOT_FILE=./lib/main.rb
 #MYBOT_FILE=$KIT_DIR/MyTronBot.rb
-MYBOT_CMD="ruby $MYBOT_FILE --debug"
+MYBOT_CMD="ruby $MYBOT_FILE --debug --safe"
 
-#RIVAL_FILE=$KIT_DIR/example_bots/Chaser.jar
+RIVAL_FILE=$KIT_DIR/example_bots/Chaser.jar
 #RIVAL_FILE=$KIT_DIR/example_bots/RandomBot.jar
 #RIVAL_FILE=$KIT_DIR/example_bots/RunAway.jar
-RIVAL_FILE=$KIT_DIR/example_bots/WallHugger.jar
+#RIVAL_FILE=$KIT_DIR/example_bots/WallHugger.jar
 RIVAL_CMD="$JAVA_CMD -jar $RIVAL_FILE"
 
 export SAFE=3
