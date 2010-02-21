@@ -36,7 +36,11 @@ class ValidMovesArray
     end
 
     def to_s
-        "\n    " + @moves.join( "\n    " )
+        pretty_print_a( @moves )
+    end
+
+    def pretty_print_a( a )
+        "\n  > " + a.reject { |m| m.nil? }.join( "\n  > " )
     end
 
     def choose
@@ -45,11 +49,11 @@ class ValidMovesArray
     end
 
     def choose_optimal
-        think "Choosing optimal from: #{@moves}"
+        think "Choosing optimal from: #{self}"
 
         sorted = @moves.sort
 
-        think "Collected weights: #{sorted}"
+        think "Collected weights: #{pretty_print_a( sorted )}"
         sorted.last
     end
 
@@ -125,7 +129,7 @@ class Move
     end
 
     def to_s
-        "#{self.name}: from #{@src}, to #{@dst} | w: [#{@weights.join(' * ')}] = #{self.weight}"
+        "#{self.name} | from #{@src}, to #{@dst} | w: [#{@weights.join(' * ')}] = #{self.weight}"
     end
 
 end

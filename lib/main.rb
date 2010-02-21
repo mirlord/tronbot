@@ -1,4 +1,4 @@
-# MirlordBot
+# Mirlord's RNP-contest Bot
 # Author: Vladimir Chizhov <master@mirlord.com>
 
 require 'lib/utils'
@@ -10,5 +10,4 @@ require 'lib/bot'
 $SAFE=3 if ARGV.include?( '--safe' )
 
 MirlordBot.new()
-
 

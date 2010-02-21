@@ -42,7 +42,7 @@ class Map
                 l = $stdin.readline("\n").chomp
                 l.gsub!( /^(\s*)(.*)(\s*)$/ ) { ('#' * $1.length) + $2 + ( '#' * $3.length ) }
 				lines << l
-                think "Readline '#{lines.last}' (l=#{lines.last.length})"
+                #think "Readline '#{lines.last}' (l=#{lines.last.length})"
 			end
 			board = lines.join("")
 			
@@ -145,7 +145,7 @@ class Map
         end
 
         # debug assertions
-        think "space: #{s[1]} + #{s[2]} + #{s[3]} + #{s[4]} + #{s[5]} + #{s[6]} + #{s[7]} + #{s[8]} = #{s[0]}"
+        think "Space: #{s[1]} + #{s[2]} + #{s[3]} + #{s[4]} + #{s[5]} + #{s[6]} + #{s[7]} + #{s[8]} = #{s[0]}"
         return s
     end
 

@@ -81,6 +81,7 @@ class MirlordBot
         valids.each do |m|
             s = m.space
             w = s * 100 / (s + m.respace)
+            valids[ m.index ].add_weight( w )
         end
     end
 
