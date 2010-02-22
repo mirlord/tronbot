@@ -22,6 +22,18 @@ class Fixnum
         ! inside_i?( from, to )
     end
 
+    def sign
+        self <=> 0
+    end
+
+end
+
+class Float
+
+    def sign
+        self <=> 0.0
+    end
+
 end
 
 class Array

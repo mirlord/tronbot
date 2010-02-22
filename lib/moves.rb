@@ -6,9 +6,9 @@ class ValidMovesArray
     include TronUtils
 
     def initialize( *moves )
-        @moves = moves
-        @moves.collect! do |m|
-            m if m.possible?
+        @moves = Array.new( moves.size, nil )
+        moves.each do |m|
+            @moves[ m.index ] = m if m.possible?
         end
     end
 
@@ -75,20 +75,36 @@ class Move
     include TronUtils
     include Comparable
 
-    attr_reader :src, :dst, :cvalue, :weights, :index
+    BASE_WEIGHT = 1.0
+
+    attr_reader :src, :dst, :weights
 
     # Parameters:
     # @map [Map]
     # @source [Point]
     # @destination [Point]
-    def initialize( map, source, cvalue, destination_method_name = nil, index = nil )
+    def initialize( map, source, destination_method_name = nil )
         @map = map
         @src = ( source.nil? ) ? map.my_point : source
         dst_method = ( destination_method_name.nil? ) ? @src.method( dname ) : @src.method( destination_method_name )
         @dst = dst_method.call
-        @cvalue = cvalue
-        @index = ( index.nil? ) ? cvalue - 1 : index # but I recommend not to specify index manually
         @weights = Array.new
+    end
+
+    def self.cvalue
+        raise "Not overriden (but MUST) in #{self.class.name}"
+    end
+
+    def self.index
+        self.cvalue - 1
+    end
+
+    def cvalue
+        self.class.cvalue
+    end
+
+    def index
+        self.class.index
     end
 
     def possible?
@@ -105,8 +121,7 @@ class Move
     end
 
     def weight
-        return 1.0 if @weights.empty?
-        res = 1.0
+        res = BASE_WEIGHT
         @weights.each do |w|
             res = res * w
         end
@@ -135,7 +150,11 @@ end
 class North < Move
 
     def initialize( map, source = nil )
-        super( map, source, 1 )
+        super( map, source )
+    end
+
+    def self.cvalue
+        return 1
     end
 
 end
@@ -143,7 +162,11 @@ end
 class East < Move
 
     def initialize( map, source = nil )
-        super( map, source, 2 )
+        super( map, source )
+    end
+
+    def self.cvalue
+        return 2
     end
 
 end
@@ -151,7 +174,11 @@ end
 class South < Move
 
     def initialize( map, source = nil )
-        super( map, source, 3 )
+        super( map, source )
+    end
+
+    def self.cvalue
+        return 3
     end
 
 end
@@ -159,7 +186,11 @@ end
 class West < Move
 
     def initialize( map, source = nil )
-        super( map, source, 4 )
+        super( map, source )
+    end
+
+    def self.cvalue
+        return 4
     end
 
 end

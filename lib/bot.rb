@@ -34,10 +34,46 @@ class MirlordBot
 
     def collect_weights
 
-        try_to_keep_direction
-        
         analyze_limited_space
+        
+        if @rival_presence
 
+            @primary_strategy = :headon
+
+            me = @map.my_point
+            rival = @map.rival_point
+            xd = me.x - rival.x
+            yd = me.y - rival.y
+            xyd = ( xd.abs - yd.abs ).abs
+
+            if xyd == 0
+                #TODO: check if I have _2_ possible moves (not only one or even less)
+                #TODO: imagine diagonal, calculate areas' space, choose direction
+            elsif xyd > 1
+                # *wf => x|y weight factor
+                xwf = 0.4 + 0.2 * (xd.abs - yd.abs).sign
+                ywf = 0.4 - 0.2 * (xd.abs - yd.abs).sign
+                #TODO: create a stub object, which silently takes & forgets the weight
+                #      to avoid so much 'unless'-es
+                @valids[ West.index ].add_weight( 1.0 + xwf * xd.sign ) unless @valids[ West.index ].nil?
+                @valids[ East.index ].add_weight( 1.0 - xwf * xd.sign ) unless @valids[ East.index ].nil?
+                @valids[ North.index ].add_weight( 1.0 + ywf * yd.sign ) unless @valids[ North.index ].nil?
+                @valids[ South.index ].add_weight( 1.0 - ywf * yd.sign ) unless @valids[ South.index ].nil?
+            elsif xyd == 1
+                #TODO: try to cut by the shortest coord, check spaces, make a decision if it's reasonable
+            end
+
+            #try_to_keep_direction
+        else
+            # TODO: hugging
+            @primary_strategy = :hugger # yeah, it will be overwritten each time, I don't care
+            try_to_keep_hugging
+        end
+
+    end
+
+    def try_to_keep_hugging
+        
     end
 
     def analyze_limited_space
@@ -50,6 +86,8 @@ class MirlordBot
         if spaces.size == 1 && @rival_presence
             check_rival_presence( spaces.first )
         end
+
+        return if spaces.size == 1
 
         s_max = spaces.sort.last
         s_max.starting_moves.each do |m|
