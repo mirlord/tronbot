@@ -31,6 +31,11 @@ class Array
         self.select { |e| e.nil? }.size
     end
 
+    def only
+        raise "This array contains more than one element" if size > 1
+        return first if ! empty? # So in case of empty aray result is 'nil'
+    end
+
 end
 
 class NilClass
