@@ -98,8 +98,7 @@ class Move
     end
 
     def weight
-        # hmm... I'm not sure, that a default weight should be 0 or 0.01 or ...
-        return 0.01 if @weights.empty?
+        return 1.0 if @weights.empty?
         res = 1.0
         @weights.each do |w|
             res = res * w

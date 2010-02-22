@@ -25,10 +25,7 @@ class Point
     end
 
     def north( withwalls = true )
-        think "Somebody wants go NORTH from #{self}"
-        n = @map.p( @x, @y - 1, withwalls )
-        think "He goes #{n}"
-        return n
+        @map.p( @x, @y - 1, withwalls )
     end
 
     def south( withwalls = true )
@@ -36,10 +33,7 @@ class Point
     end
 
     def west( withwalls = true )
-        think "Somebody wants go WEST from #{self}"
-        n = @map.p( @x - 1, @y, withwalls )
-        think "He goes #{n}"
-        return n
+        @map.p( @x - 1, @y, withwalls )
     end
 
     def east( withwalls = true )
@@ -76,10 +70,12 @@ class Point
     end
 
     def eql?( comp )
+        return true if super( comp )
         self.x == comp.x && self.y == comp.y
     end
 
     def ==( comp )
+        return true if super( comp )
         self.eql?( comp )
     end
 
