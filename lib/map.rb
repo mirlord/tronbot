@@ -5,7 +5,7 @@ class Map
     
     include TronUtils
 
-	attr_reader :width, :height, :my_position, :rival_position, :history
+	attr_reader :width, :height, :history
 	
 	def initialize( history )
 	
@@ -91,8 +91,13 @@ class Map
 	private :read_map
 
     def my_point
-        x, y = my_position
-        Point.new( self, x, y )
+        x, y = @my_position
+        p( x, y, true )
+    end
+	
+    def rival_point
+        x, y = @rival_position
+        p( x, y, true )
     end
 	
 	def each(&proc)

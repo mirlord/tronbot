@@ -9,9 +9,9 @@ class MirlordBot
     # @map [Map]
 	def makemove( map )
 	    
-		valids = ValidMovesArray.new( North.new( map ), East.new( map ), South.new( map ), West.new( map ) )
+        valids = my_valid_moves( map )
         think "Possible valid moves: #{valids}"
-		
+
 		if valids.nsize == 0
 			map.make_move( 0 )
 		else
@@ -24,6 +24,7 @@ class MirlordBot
             #m = valid_moves[rand(valid_moves.size)] unless valid_moves.include?( m ) && (! debug?)
 
             think "Going to make a move: #{m}"
+            think "Rival is here? #{@rival_presence}"
 			m.make
 		end
 	
@@ -37,8 +38,6 @@ class MirlordBot
 
         try_to_keep_direction( map, valids )
         
-        escape_from_rival( map, valids )
-
         analyze_limited_space( map, valids )
 
         # on 2 opposite directions
@@ -54,12 +53,28 @@ class MirlordBot
         end
         spaces = sws.execute
         think "Spaces available:\n    #{spaces.join("\n    ")}"
-        return if spaces.size < 2
+        if spaces.size == 1 && @rival_presence
+            check_rival_presence( map, spaces.first )
+        end
 
         s_max = spaces.sort.last
         s_max.starting_moves.each do |m|
             valids[ m.index ].add_weight( 2.0 )
         end
+    end
+
+    def my_valid_moves( map )
+		return ValidMovesArray.new( North.new( map ), East.new( map ), South.new( map ), West.new( map ) )
+    end
+
+    def rival_valid_moves( map )
+        rp = map.rival_point
+		return ValidMovesArray.new( North.new( map, rp ), East.new( map, rp ), South.new( map, rp ), West.new( map, rp ) )
+    end
+
+    def check_rival_presence( map, space_info )
+        rvalids = rival_valid_moves( map )
+        @rival_presence = ! (rvalids.map { |rm| rm.dst } & space_info.contents).empty?
     end
 
     def try_to_keep_direction( map, valids )
@@ -84,15 +99,6 @@ class MirlordBot
         think "Long direction advice is: #{valids}"
     end
 
-    def escape_from_rival( map, valids )
-		x, y = map.my_position
-		rx, ry = map.rival_position
-
-        if ( (rx - x).abs + (ry - y).abs ) <= 5
-            think "I'm not afraid of you, guy! :)".gsub( /(g).(y)/ ) { |s| $1 + "a" + $2 }
-        end
-    end
-
     def dichotomy( map, valids )
         factor = 3
         # it *could* be done quicker, but not significantly, I guess
@@ -106,6 +112,7 @@ class MirlordBot
 	def initialize
 
         @history = Array.new
+        @rival_presence = true
 	
 		while(true)
 		

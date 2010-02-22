@@ -18,6 +18,13 @@ class ValidMovesArray
         end
     end
 
+    def map( &block )
+        r = Array.new
+        @moves.each do |e|
+            r << yield( e ) unless e.nil?
+        end
+    end
+
     def opposite?
         ( nsize == 2) && ( ( @moves[0].nil? && @moves[2].nil? ) || ( @moves[1].nil? && @moves[3].nil? )  )
     end
