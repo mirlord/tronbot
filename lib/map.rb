@@ -43,7 +43,8 @@ class Map
 			lines = []
 			@height.times do
                 l = $stdin.readline("\n").chomp
-                l.gsub!( /^(\s*)(.*)(\s*)$/ ) { ('#' * $1.length) + $2 + ( '#' * $3.length ) }
+                # the following became unnecessary
+                #l.gsub!( /^(\s*)(.*)(\s*)$/ ) { ('#' * $1.length) + $2 + ( '#' * $3.length ) }
 				lines << l
                 #think "Readline '#{lines.last}' (l=#{lines.last.length})"
 			end
@@ -110,53 +111,6 @@ class Map
 		
 	end
 	
-    # @p [Point]
-    # return [Array] 9 elements with zone weights
-    # 123
-    # 4-5
-    # 678
-    # 0 = full
-    # large weight is bad!
-    #
-    # cost ~0.00023 sec
-    def calculate_space( p )
-        ll = []
-        cl = []
-        rl = []
-
-        x = p.x # very beatiful
-        y = p.y # and useful :)
-
-        (0..@height-1).each do |ln|
-            start = ln * @width
-            fl = @walls[start, @width] # full line
-            ll.concat( fl[0, x] )
-            cl.concat fl[x, 1]
-            rl.concat fl[x+1, @width-x-1]
-        end
-        
-        s = Array.new
-        s[1] = ll[0,x*y].nils_count
-        s[2] = cl[0,y].nils_count
-        s[3] = rl[0,y*(@width-x-1)].nils_count
-
-        s[4] = ll[x*y,x].nils_count
-        s[5] = rl[y*(@width-x-1),@width-x-1].nils_count
-
-        s[6] = ll[(x*y+x)..(ll.length-1)].nils_count
-        s[7] = cl[(y+1)..@height-1].nils_count
-        s[8] = rl[(@width-x-1)*(y+1)..(rl.length-1)].nils_count
-
-        s[0] = 0
-        s.each do |i|
-            s[0] = s[0] + i
-        end
-
-        # debug assertions
-        #think "Space: #{s[1]} + #{s[2]} + #{s[3]} + #{s[4]} + #{s[5]} + #{s[6]} + #{s[7]} + #{s[8]} = #{s[0]}"
-        return s
-    end
-
 	def wall? (x, y)
 		return true if x < 0 or y < 0 or x >= @width or y >= @height
 		return @walls[x+@width*y]

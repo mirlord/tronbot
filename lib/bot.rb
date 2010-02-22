@@ -38,10 +38,6 @@ class MirlordBot
         
         analyze_limited_space
 
-        # on 2 opposite directions
-        if @valids.opposite?
-            dichotomy
-        end
     end
 
     def analyze_limited_space
@@ -97,22 +93,13 @@ class MirlordBot
         think "Long direction advice is: #{@valids}"
     end
 
-    def dichotomy
-        factor = 3
-        # it *could* be done quicker, but not significantly, I guess
-        @valids.each do |m|
-            s = m.space
-            w = 1.0 + ( s / (s + m.respace) * factor )
-            @valids[ m.index ].add_weight( w )
-        end
-    end
-
 	def initialize
 
         @history = Array.new
         @rival_presence = true
         @map = nil
         @valids = nil
+        @primary_strategy = nil
 	
 		while(true)
 		
