@@ -106,7 +106,7 @@ class MirlordBot
 
     def check_rival_presence( space_info )
         rvalids = rival_valid_moves
-        @rival_presence = ! (rvalids.map { |rm| rm.dst } & space_info.contents).empty?
+        @rival_presence = ! ((rvalids.map { |rm| rm.dst }) & space_info.contents).empty?
     end
 
     def try_to_keep_direction

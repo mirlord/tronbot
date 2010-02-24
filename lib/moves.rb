@@ -21,8 +21,9 @@ class ValidMovesArray
     def map( &block )
         r = Array.new
         @moves.each do |e|
-            r << yield( e ) unless e.nil?
+            r << block.call( e ) unless e.nil?
         end
+        return r
     end
 
     def opposite?
