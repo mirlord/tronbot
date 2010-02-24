@@ -56,53 +56,63 @@ class MirlordBot
             yd = me.y - rival.y
             xyd = ( xd.abs - yd.abs ).abs
 
-            if xyd == 0
-                iwalls = [] # imagined walls
-                (1..(xd.abs-1)).each do |i|
-                    iwalls << @map.p( me.x - i * xd.sign, me.y - i * yd.sign , true  )
-                end
-                imap = @map.imagine( iwalls )
-                ispaces = analyze_limited_space( imap, my_valid_moves( imap ) )
-                if ispaces.size > 1
-                    ispaces.sort!
-                    is_max = ispaces.last
-                    is_max.starting_moves.each do |m|
-                        @valids[ m.index ].add_weight( 1.2 )
+            if ( xd.abs + yd.abs ) > 2
+                if xyd == 0
+                    iwalls = [] # imagined walls
+                    (1..(xd.abs-1)).each do |i|
+                        iwalls << @map.p( me.x - i * xd.sign, me.y - i * yd.sign , true  )
+                    end
+                    imap = @map.imagine( iwalls )
+                    ispaces = analyze_limited_space( imap, my_valid_moves( imap ) )
+                    if ispaces.size > 1
+                        ispaces.sort!
+                        is_max = ispaces.last
+                        is_max.starting_moves.each do |m|
+                            @valids[ m.index ].add_weight( 1.2 )
+                        end
+
+                        is_min = ispaces.first
+                        is_min.starting_moves.each do |m|
+                            @valids[ m.index ].add_weight( 0.8 )
+                        end
                     end
 
-                    is_min = ispaces.first
-                    is_min.starting_moves.each do |m|
-                        @valids[ m.index ].add_weight( 0.8 )
+                    # *wf => x|y weight factor
+                    xwf = 0.3 * xd.sign
+                    ywf = 0.3 * yd.sign
+
+                    #TODO: create a stub object, which silently takes & forgets the weight
+                    #      to avoid so much 'unless'-es
+                    @valids[ West.index ].add_weight( 1.1 + xwf ) unless @valids[ West.index ].nil?
+                    @valids[ East.index ].add_weight( 1.1 - xwf ) unless @valids[ East.index ].nil?
+                    @valids[ North.index ].add_weight( 1.1 + ywf ) unless @valids[ North.index ].nil?
+                    @valids[ South.index ].add_weight( 1.1 - ywf ) unless @valids[ South.index ].nil?
+
+                elsif xyd > 1
+                    follow_longest_delta( xd, yd )
+                elsif xyd == 1
+                    iwalls = [] # imagined walls
+                    if xd.abs < yd.abs
+                        (1..(xd.abs)).each do |i|
+                            iwalls << @map.p( me.x - i * xd.sign, me.y, true  )
+                        end
+                        (1..(yd.abs)).each do |i|
+                            iwalls << @map.p( rival.x, rival.y + i * yd.sign, true  )
+                        end
+                    else
+                        (1..(yd.abs)).each do |i|
+                            iwalls << @map.p( me.x, me.y - i * yd.sign, true  )
+                        end
+                        (1..(xd.abs)).each do |i|
+                            iwalls << @map.p( rival.x + i * xd.sign, rival.y, true  )
+                        end
                     end
+                    imap = @map.imagine( iwalls ) # imagined map
+                    ispaces = analyze_limited_space( imap, my_valid_moves( imap ) )
+                    follow_longest_delta( xd, yd, 0.5 )
                 end
-
-                # *wf => x|y weight factor
-                xwf = 0.3 * xd.sign
-                ywf = 0.3 * yd.sign
-
-                #TODO: create a stub object, which silently takes & forgets the weight
-                #      to avoid so much 'unless'-es
-                @valids[ West.index ].add_weight( 1.1 + xwf ) unless @valids[ West.index ].nil?
-                @valids[ East.index ].add_weight( 1.1 - xwf ) unless @valids[ East.index ].nil?
-                @valids[ North.index ].add_weight( 1.1 + ywf ) unless @valids[ North.index ].nil?
-                @valids[ South.index ].add_weight( 1.1 - ywf ) unless @valids[ South.index ].nil?
-
-            elsif xyd > 1
-                # *wf => x|y weight factor
-                xwf = ( 0.4 + 0.2 * (xd.abs - yd.abs).sign ) * xd.sign
-                ywf = ( 0.4 - 0.2 * (xd.abs - yd.abs).sign ) * yd.sign
-
-                #TODO: create a stub object, which silently takes & forgets the weight
-                #      to avoid so much 'unless'-es
-                @valids[ West.index ].add_weight( 1.0 + xwf ) unless @valids[ West.index ].nil?
-                @valids[ East.index ].add_weight( 1.0 - xwf ) unless @valids[ East.index ].nil?
-                @valids[ North.index ].add_weight( 1.0 + ywf ) unless @valids[ North.index ].nil?
-                @valids[ South.index ].add_weight( 1.0 - ywf ) unless @valids[ South.index ].nil?
-            elsif xyd == 1
-                #TODO: try to cut by the shortest coord, check spaces, make a decision if it's reasonable
             end
 
-            #try_to_keep_direction
         else
             # TODO: hugging
             @primary_strategy = :hugger # yeah, it will be overwritten each time, I don't care
@@ -111,6 +121,19 @@ class MirlordBot
 
         try_to_keep_direction
 
+    end
+
+    def follow_longest_delta( xd, yd, reduce_factor = 1.0 )
+        # *wf => x|y weight factor
+        xwf = ( 0.4 + 0.2 * (xd.abs - yd.abs).sign ) * xd.sign * reduce_factor
+        ywf = ( 0.4 - 0.2 * (xd.abs - yd.abs).sign ) * yd.sign * reduce_factor
+
+        #TODO: create a stub object, which silently takes & forgets the weight
+        #      to avoid so much 'unless'-es
+        @valids[ West.index ].add_weight( 1.0 + xwf ) unless @valids[ West.index ].nil?
+        @valids[ East.index ].add_weight( 1.0 - xwf ) unless @valids[ East.index ].nil?
+        @valids[ North.index ].add_weight( 1.0 + ywf ) unless @valids[ North.index ].nil?
+        @valids[ South.index ].add_weight( 1.0 - ywf ) unless @valids[ South.index ].nil?
     end
 
     def try_to_keep_hugging
