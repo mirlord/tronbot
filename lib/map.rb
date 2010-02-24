@@ -5,22 +5,66 @@ class Map
     
     include TronUtils
 
-	attr_reader :width, :height, :history
+protected
+
+    attr_writer :my_point, :rival_point
+    
+public
+
+    attr_reader :width, :height, :history, :my_point, :rival_point
 	
-	def initialize( history )
+	def initialize( history = [] )
 	
         @history = history
-		@width = -1
-		@height = -1
-		@walls = []
-		@my_position = [-1,-1]
-		@rival_position = [-1,-1]
+        @width = -1
+        @height = -1
+        @walls = []
+        @my_point = nil
+        @rival_point = nil
         @points = nil
 		
-		read_map
-		
-	end	
-	
+	end
+
+    def initialize_copy( from_map )
+        #@history = @history.clone # unnecessary, so skipped for performance
+        @walls = @walls.clone
+        @my_point = nil
+        @rival_point = nil
+        @points = Array.new( @width ) { Array.new( @height ) }
+    end
+
+    def set_wall_at( x, y )
+        @walls[ y * @width + x ] = true
+    end
+    protected :set_wall_at
+
+    def self.read_new( history = [] )
+        m = Map.new( history )
+        m.read_map
+        return m
+    end
+
+    # @walls: [Array<Point>]
+    # @my_coords [Array<Fixnum,Fixnum>] nil means unchanged
+    # @rival_coords [Array<Fixnum,Fixnum>] nil means unchanged
+    def imagine( iwalls = [], my_coords = nil, rival_coords = nil )
+
+        mcopy = self.clone
+        iwalls.each do |iwp|
+            mcopy.set_wall_at( iwp.x, iwp.y )
+        end
+
+        my_coords = [self.my_point.x, self.my_point.y] if my_coords.nil?
+        rival_coords = [self.rival_point.x, self.rival_point.y] if rival_coords.nil?
+        
+        x, y = my_coords
+        mcopy.my_point = mcopy.p( x, y, true )
+        x, y = rival_coords
+        mcopy.rival_point = mcopy.p( x, y, true )
+
+        return mcopy
+    end
+
 	def read_map
 	
 		begin
@@ -70,13 +114,13 @@ class Map
 			
 			p "OOPS!: Cannot find locations." if p1start == nil or p2start == nil
 			
-			pstartx = p1start % @width
-			pstarty = (p1start / @width)
-			@my_position = [pstartx, pstarty]
+			px = p1start % @width
+			py = (p1start / @width)
+			@my_point = p( px, py, true )
 			
-			pstartx = p2start % @width
-			pstarty = (p2start / @width)
-			@rival_position = [pstartx, pstarty]
+			px = p2start % @width
+			py = (p2start / @width)
+			@rival_point = p( px, py, true )
 					
 			
 		rescue EOFError => e
@@ -89,18 +133,7 @@ class Map
 		end
 	
 	end
-	private :read_map
 
-    def my_point
-        x, y = @my_position
-        p( x, y, true )
-    end
-	
-    def rival_point
-        x, y = @rival_position
-        p( x, y, true )
-    end
-	
 	def each(&proc)
 		
 		(0..@height-1).each{|y|
@@ -118,7 +151,7 @@ class Map
 
     def p( x, y, withwalls = false )
         return nil if x.outside?( 0, @width-1 ) || y.outside?( 0, @height-1 )
-        if ! self.wall?(x,y) || withwalls
+        if ! wall?(x,y) || withwalls
             unless @points[x][y].nil?
                 @points[x][y]
             else
@@ -127,7 +160,7 @@ class Map
         end
     end
 
-	def to_string()
+	def to_string
 
 		out = ""
 		counter = 0

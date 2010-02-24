@@ -21,7 +21,7 @@ class ValidMovesArray
     def map( &block )
         r = Array.new
         @moves.each do |e|
-            r << block.call( e ) unless e.nil?
+            r << yield( e ) unless e.nil?
         end
         return r
     end
@@ -66,6 +66,7 @@ class ValidMovesArray
     end
 
     def []( index )
+        #TODO: stub for nils
         @moves[ index ]
     end
 
