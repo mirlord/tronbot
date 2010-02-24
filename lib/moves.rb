@@ -112,8 +112,8 @@ class Move
     end
 
     def make
-        @map.history << @index
-        @map.make_move( @cvalue )
+        @map.history << index
+        @map.make_move( cvalue )
     end
     
     def add_weight( w )
