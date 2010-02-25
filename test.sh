@@ -17,11 +17,12 @@ LOG_DIR=./log
 #MAP=./test/maps/dont_split_test.txt
 #MAP=$KIT_DIR/maps/apocalyptic.txt
 #MAP=$KIT_DIR/maps/empty-room.txt
-MAP=$KIT_DIR/maps/playground.txt
+MAP=$KIT_DIR/maps/huge-room.txt
+#MAP=$KIT_DIR/maps/playground.txt
 
-MYBOT_FILE=./lib/main.rb
+#MYBOT_FILE=./lib/main.rb
 #MYBOT_FILE=$KIT_DIR/MyTronBot.rb
-#MYBOT_FILE=./MyTronBot.rb
+MYBOT_FILE=./MyTronBot.rb
 MYBOT_CMD="ruby $MYBOT_FILE --debug"
 
 #RIVAL_FILE=$KIT_DIR/example_bots/Chaser.jar
@@ -32,9 +33,9 @@ RIVAL_CMD="$JAVA_CMD -jar $RIVAL_FILE"
 
 export SAFE=3
 
-for i in $KIT_DIR/maps/*.txt; do
-    $JAVA_CMD -jar $KIT_DIR/engine/Tron.jar $i "$MYBOT_CMD" "$RIVAL_CMD" | tee $LOG_DIR/fight.log
-done
+#for i in $KIT_DIR/maps/*.txt; do
+    #$JAVA_CMD -jar $KIT_DIR/engine/Tron.jar $i "$MYBOT_CMD" "$RIVAL_CMD" | tee $LOG_DIR/fight.log
+#done
 
 
 $JAVA_CMD -jar $KIT_DIR/engine/Tron.jar $MAP "$MYBOT_CMD" "$RIVAL_CMD" | tee $LOG_DIR/fight.log

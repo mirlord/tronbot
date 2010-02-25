@@ -5,7 +5,7 @@ class SpaceWidthSearch
 
     include TronUtils
 
-    DEPTH_LIMIT_DEFAULT=100
+    DEPTH_LIMIT_DEFAULT=15
 
     attr_reader :total_size
 
@@ -109,8 +109,10 @@ class SpaceInfo
         ! (contents & si.contents).empty? unless si.nil?
     end
 
-    def pop_each
-        @boundaries.each do |p|
+    def pop_each( &block )
+        # without temporary array, pop & push falls into a kind of conflict
+        tmp = @boundaries.clone
+        tmp.each do |p|
             yield( p )
         end
         @boundaries.clear

@@ -25,13 +25,14 @@ class MirlordBot
 	
 	end
 
-    def rival_valids
-		rvalids = ValidMovesArray.new( North.new( @map ), East.new( @map ), South.new( @map ), West.new( @map ) )
+    def base_spaces
+        @spaces_base, @spaces_total = analyze_limited_space( @map, @valids ) if @spaces_base.nil?
+        return @spaces_base, @spaces_total
     end
 
     def collect_weights
 
-        spaces, total_size = analyze_limited_space( @map, @valids )
+        spaces, _ = base_spaces
         if spaces.size == 1 && @rival_presence
             check_rival_presence( @map, spaces.first )
         end
@@ -125,7 +126,7 @@ class MirlordBot
                 end
             end
 
-            try_to_predict_splits
+            #try_to_predict_splits
 
         else
             try_to_keep_hugging
@@ -165,8 +166,8 @@ class MirlordBot
     end
 
     def try_not_to_split
+        spaces, _ = base_spaces
         @valids.each do |m|
-            spaces, _ = analyze_limited_space( @map, @valids )
             imap = @map.imagine( [], [m.dst.x, m.dst.y] )
             ispaces, total = analyze_limited_space( imap, my_valid_moves( imap ) )
             if ispaces.size > spaces.size
@@ -228,7 +229,6 @@ class MirlordBot
         previous = @history.last
         unless previous.nil? || ! @valids.include_index?( previous )
             last_and_valid = @history.last( 5 ).select { |mi| @valids.include_index? mi }
-            #think "Trying to keep last from: #{last_and_valid}, while prev was: #{previous}"
             last_and_valid.uniq!
 
             if last_and_valid.size == 1 && last_and_valid[0] == previous
@@ -239,8 +239,6 @@ class MirlordBot
                 @valids[ previous ].add_weight 1.01
             end
         end
-
-        think "Long direction advice is: #{@valids}"
     end
 
 	def initialize
@@ -249,6 +247,8 @@ class MirlordBot
         @rival_presence = true
         @map = nil
         @valids = nil
+        @spaces_base = nil
+        @spaces_total = nil
 	
 		while(true)
 		
@@ -262,6 +262,8 @@ class MirlordBot
             # a small portion of paranoia :D
             @map = nil
             @valids = nil
+            @spaces_base = nil
+            @spaces_total = nil
 		end
 	
 	end

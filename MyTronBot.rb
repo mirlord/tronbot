@@ -1,4 +1,15 @@
 
+def timed( msg, &block )
+    from = Time.now
+    yield
+    to = Time.now
+    $stderr.puts "> #{msg}: #{ (to - from) } sec"
+end
+
+def think( *args )
+    $stderr.puts "BT> #{args.join("\n -> ")}\n"
+end
+
 class Fixnum
 
     def inside_i?( from, to )
@@ -289,7 +300,7 @@ end
 
 class SpaceWidthSearch
 
-    DEPTH_LIMIT_DEFAULT=100
+    DEPTH_LIMIT_DEFAULT=15
 
     attr_reader :total_size
 
@@ -306,7 +317,9 @@ class SpaceWidthSearch
     end
 
     def execute
+        count = 0
         @depth.times do
+            think "counting: #{count}"
             merge_intersections
             @spaces.reject! do |si|
                 if si.closed?
@@ -383,7 +396,9 @@ class SpaceInfo
     end
 
     def pop_each
-        @boundaries.each do |p|
+        # without temporary array, pop & push falls into a kind of conflict
+        tmp = @boundaries.clone
+        tmp.each do |p|
             yield( p )
         end
         @boundaries.clear
@@ -640,14 +655,10 @@ class MirlordBot
 	
 	end
 
-    def rival_valids
-		rvalids = ValidMovesArray.new( North.new( @map ), East.new( @map ), South.new( @map ), West.new( @map ) )
-    end
-
     def collect_weights
 
-        spaces, total_size = analyze_limited_space( @map, @valids )
-        if spaces.size == 1 && @rival_presence
+        spaces, _ = base_spaces
+        if spaces.size == 1 && @rival_presence && ! spaces.last.closed?
             check_rival_presence( @map, spaces.first )
         end
 
@@ -726,7 +737,7 @@ class MirlordBot
                         # cut it!
                         @valids[ cutting_move_index ].add_weight( 1.9 )
                     end
-                    follow_longest_delta( xd, yd, 1.0, 0.2, 0.1 )
+                    #follow_longest_delta( xd, yd, 1.0, 0.2, 0.1 )
                 end
             elsif ( xd.abs + yd.abs ) == 1
                 rvalids = rival_valid_moves( @map )
@@ -781,8 +792,8 @@ class MirlordBot
     end
 
     def try_not_to_split
+        spaces, _ = base_spaces
         @valids.each do |m|
-            spaces, _ = analyze_limited_space( @map, @valids )
             imap = @map.imagine( [], [m.dst.x, m.dst.y] )
             ispaces, total = analyze_limited_space( imap, my_valid_moves( imap ) )
             if ispaces.size > spaces.size
@@ -808,6 +819,11 @@ class MirlordBot
                 @valids[ m.index ].add_weight( 1.2 )
             end
         end
+    end
+
+    def base_spaces
+        @spaces_base, @spaces_total = analyze_limited_space( @map, @valids ) if @spaces_base.nil?
+        return @spaces_base, @spaces_total
     end
 
     def analyze_limited_space( map, valids )
@@ -857,14 +873,20 @@ class MirlordBot
         @rival_presence = true
         @map = nil
         @valids = nil
+        @spaces_base = nil
+        @spaces_total = nil
 	
 		while(true)
 		
             @map = TronMap.read_new( @history )
-            makemove
+            timed "Bot was thinking for" do
+                makemove
+            end
 
             @map = nil
             @valids = nil
+            @spaces_base = nil
+            @spaces_total = nil
 		end
 	
 	end
