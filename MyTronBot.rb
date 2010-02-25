@@ -139,16 +139,16 @@ public
 			p2start = board.index("2").to_i
 			
 			if board.split(//).select{|char| char == "1"}.size > 1
-				p "OOPS!: found more than 1 location for player 1"
+				$stderr.puts "OOPS!: found more than 1 location for player 1"
 				exit(1)
 			end
 			
 			if board.split(//).select{|char| char == "2"}.size > 1
-				p "OOPS!: found more than 1 location for player 2"
+				$stderr.puts "OOPS!: found more than 1 location for player 2"
 				exit(1)
 			end
 			
-			p "OOPS!: Cannot find locations." if p1start == nil or p2start == nil
+			$stderr.puts "OOPS!: Cannot find locations." if p1start == nil or p2start == nil
 			
 			px = p1start % @width
 			py = (p1start / @width)
@@ -163,7 +163,7 @@ public
 			exit(0)
 			
 		rescue => e
-			p  e
+			$stderr.puts  e
 			exit(1)
 		end
 	
@@ -442,6 +442,10 @@ class ValidMovesArray
     
     def size
         @moves.size - @moves.nils_count
+    end
+
+    def empty?
+        size == 0
     end
 
     def include_index?( mindex )
@@ -738,6 +742,8 @@ class MirlordBot
                 end
             end
 
+            try_to_predict_splits
+
         else
             try_to_keep_hugging
 
@@ -748,9 +754,36 @@ class MirlordBot
 
     end
 
+    def try_to_predict_splits
+        rvalids = rival_valid_moves( @map )
+        @valids.each do |my_move|
+            rvalids.each do |r_move|
+                imap = @map.imagine( [], [my_move.dst.x, my_move.dst.y], [r_move.dst.x, r_move.dst.y] )
+                ivalids = my_valid_moves( imap )
+                if ivalids.empty?
+                    @valids[ my_move.index ].add_weight( 0.2 )
+                    next
+                end
+                ispaces, _ = analyze_limited_space( imap, ivalids )
+                rivalids = rival_valid_moves( imap )
+                if rivalids.empty?
+                    # it's a small chance to cut
+                    @valids[ my_move.index ].add_weight( 1.05 )
+                    next
+                end
+                irspaces, _ = analyze_limited_space( imap, rivalids )
+                ispaces.sort!
+                irspaces.sort!
+                if ispaces.last.size < irspaces.last.size
+                    @valids[ my_move.index ].add_weight( 0.4 )
+                end
+            end
+        end
+    end
+
     def try_not_to_split
         @valids.each do |m|
-            spaces, total_size = analyze_limited_space( @map, @valids )
+            spaces, _ = analyze_limited_space( @map, @valids )
             imap = @map.imagine( [], [m.dst.x, m.dst.y] )
             ispaces, total = analyze_limited_space( imap, my_valid_moves( imap ) )
             if ispaces.size > spaces.size
