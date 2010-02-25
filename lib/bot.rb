@@ -145,7 +145,11 @@ class MirlordBot
     end
 
     def try_to_keep_hugging
-        # TODO: hugging
+        @valids.each do |m|
+            if m.along_wall?
+                @valids[ m.index ].add_weight( 1.2 )
+            end
+        end
     end
 
     def analyze_limited_space( map, valids )
@@ -184,7 +188,7 @@ class MirlordBot
                 @valids[ previous ].add_weight 1.2
             elsif last_and_valid.size > 1 && last_and_valid[0] == previous
                 @valids[ previous ].add_weight 1.15
-            elsif last_and_valid.include_index? previous
+            elsif last_and_valid.include? previous
                 @valids[ previous ].add_weight 1.1
             end
         end

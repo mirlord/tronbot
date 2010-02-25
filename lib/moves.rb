@@ -158,6 +158,13 @@ class Move
         :"#{self.class.name.downcase}"
     end
 
+    # @return 0, 1, 2
+    def along_wall?
+        w1, w2 = walls
+        return true if dst.method( w1 ).call.wall? || dst.method( w2 ).call.wall?
+        return false
+    end
+
 end
 
 class North < Move
@@ -168,6 +175,10 @@ class North < Move
 
     def self.cvalue
         return 1
+    end
+
+    def walls
+        [ :west, :east ]
     end
 
 end
@@ -182,6 +193,10 @@ class East < Move
         return 2
     end
 
+    def walls
+        [ :north, :south ]
+    end
+
 end
 
 class South < Move
@@ -194,6 +209,10 @@ class South < Move
         return 3
     end
 
+    def walls
+        [ :west, :east ]
+    end
+
 end
 
 class West < Move
@@ -204,6 +223,10 @@ class West < Move
 
     def self.cvalue
         return 4
+    end
+
+    def walls
+        [ :north, :south ]
     end
 
 end

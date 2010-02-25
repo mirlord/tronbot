@@ -8,9 +8,9 @@ LOG_DIR=./log
 
 [ -d $LOG_DIR ] || mkdir -p $LOG_DIR
 
-#MAP=./test/maps/space_test.txt
+MAP=./test/maps/space_test.txt
 #MAP=./test/maps/long_coord_test.txt
-MAP=./test/maps/headon_symmetric_test.txt
+#MAP=./test/maps/headon_symmetric_test.txt
 #MAP=./test/maps/dont_split_test.txt
 #MAP=$KIT_DIR/maps/apocalyptic.txt
 #MAP=$KIT_DIR/maps/empty-room.txt
