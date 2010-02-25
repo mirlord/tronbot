@@ -1,4 +1,18 @@
 
+def debug?
+    ARGV.include?( '--debug' )
+end
+
+def think( *args )
+    # do nothing in production
+end
+
+# redefine 'think' for debug mode
+def think( *args )
+    $stderr.puts "BT> #{args.join("\n -> ")}\n"
+end if debug?
+
+
 class Fixnum
 
     def inside_i?( from, to )
@@ -289,7 +303,7 @@ end
 
 class SpaceWidthSearch
 
-    DEPTH_LIMIT_DEFAULT=15
+    DEPTH_LIMIT_DEFAULT=25
 
     attr_reader :total_size
 
@@ -315,7 +329,7 @@ class SpaceWidthSearch
                 end
             end
 
-            break if @spaces.size < 2
+            break if @spaces.empty?
 
             @spaces.each do |si|
                 si.pop_each do |p|
@@ -324,6 +338,9 @@ class SpaceWidthSearch
             end
         end
         @done += @spaces
+        @spaces.each do |si|
+            @total_size += si.size
+        end
         return @done
     end
 
@@ -385,10 +402,10 @@ class SpaceInfo
     def pop_each
         # without temporary array, pop & push falls into a kind of conflict
         tmp = @boundaries.clone
+        @boundaries.clear
         tmp.each do |p|
             yield( p )
         end
-        @boundaries.clear
     end
     
     def inspect
@@ -471,8 +488,9 @@ class ValidMovesArray
     def choose_optimal
 
         sorted = @moves.sort
-
-        sorted.last
+        
+        #think "Choosing from: #{@moves}"
+        return sorted.last
     end
 
     def []( index )
@@ -555,6 +573,11 @@ class Move
         w1, w2 = walls
         return true if dst.method( w1 ).call.wall? || dst.method( w2 ).call.wall?
         return false
+    end
+
+    def has_front_points?
+        front_move = self.class.new( @map, @dst )
+        return true if ! front_move.possible? || front_move.along_wall?
     end
 
 end
@@ -645,7 +668,8 @@ class MirlordBot
     def collect_weights
 
         spaces, _ = base_spaces
-        if spaces.size == 1 && @rival_presence && ! spaces.last.closed?
+        if spaces.size == 1 && @rival_presence
+            #think "Unconfirmed, need to check"
             check_rival_presence( @map, spaces.first )
         end
 
@@ -716,15 +740,19 @@ class MirlordBot
                         cutting_move_index = yd < 0 ? South.index : North.index
                     end
                     imap = @map.imagine( iwalls, my_icoords, rival_icoords ) # imagined map
-                    ispaces, _ = analyze_limited_space( imap, my_valid_moves( imap ) )
-                    rival_ispaces, _ = analyze_limited_space( imap, rival_valid_moves( imap ) )
-                    ispaces.sort!
-                    rival_ispaces.sort!
-                    if ispaces.last.size > rival_ispaces.last.size
-                        # cut it!
-                        @valids[ cutting_move_index ].add_weight( 1.9 )
+                    ivalids = my_valid_moves( imap )
+                    irvalids = rival_valid_moves( imap )
+                    if ivalids.size > 0 && irvalids.size > 0
+                        ispaces, _ = analyze_limited_space( imap, ivalids )
+                        rival_ispaces, _ = analyze_limited_space( imap, irvalids )
+                        ispaces.sort! if ispaces.size > 1
+                        rival_ispaces.sort! if rival_ispaces.size > 1
+                        if ispaces.last.size > rival_ispaces.last.size
+                            # cut it!
+                            @valids[ cutting_move_index ].add_weight( 1.9 ) unless @valids[ cutting_move_index ].nil?
+                        end
+                        follow_longest_delta( xd, yd, 1.0, 0.2, 0.1 )
                     end
-                    #follow_longest_delta( xd, yd, 1.0, 0.2, 0.1 )
                 end
             elsif ( xd.abs + yd.abs ) == 1
                 rvalids = rival_valid_moves( @map )
@@ -736,6 +764,11 @@ class MirlordBot
                         @valids[ blocking_move.index ].add_weight( 1.8 )
                     end
                 end
+            end
+
+            if ! @rival_presence_confirmed
+                #think "Unconfirmed, so trying not to split"
+                try_not_to_split
             end
 
             # TODO: need optimization
@@ -781,11 +814,16 @@ class MirlordBot
     def try_not_to_split
         spaces, _ = base_spaces
         @valids.each do |m|
-            imap = @map.imagine( [], [m.dst.x, m.dst.y] )
-            ispaces, total = analyze_limited_space( imap, my_valid_moves( imap ) )
-            if ispaces.size > spaces.size
-                ispaces.sort!
-                @valids[ m.index ].add_weight( ( ispaces.last.size.to_f / total.to_f - 0.2 ).abs  )
+            if m.has_front_points?
+                #think "Trying not to split for: #{m}"
+                imap = @map.imagine( [], [m.dst.x, m.dst.y] )
+                ispaces, total = analyze_limited_space( imap, my_valid_moves( imap ) )
+                if ispaces.size > spaces.size
+                    ispaces.sort!
+                    think "isp=#{ispaces.last.size.to_f}; total=#{total.to_f}"
+                    @valids[ m.index ].add_weight( ( ispaces.last.size.to_f / total.to_f ).abs  )
+                    @valids[ m.index ].add_weight( 0.7 )
+                end
             end
         end
     end
@@ -833,7 +871,16 @@ class MirlordBot
 
     def check_rival_presence( map, space_info )
         rvalids = rival_valid_moves( map )
-        @rival_presence = ! ((rvalids.map { |rm| rm.dst }) & space_info.contents).empty?
+        presence = ! ((rvalids.map { |rm| rm.dst }) & space_info.contents).empty?
+        if presence # 100% confirmed
+            #think "100% presence confirmed"
+            @rival_presence = true
+            @rival_presence_confirmed = true
+        elsif space_info.closed? # 100% absence confirmed
+            #think "100% absence confirmed"
+            @rival_presence = false
+            @rival_presence_confirmed = true
+        end
     end
 
     def try_to_keep_direction
@@ -858,6 +905,7 @@ class MirlordBot
 
         @history = Array.new
         @rival_presence = true
+        @rival_presence_confirmed = false
         @map = nil
         @valids = nil
         @spaces_base = nil
