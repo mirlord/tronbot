@@ -9,6 +9,7 @@ LOG_DIR=./log
 [ -d $LOG_DIR ] || mkdir -p $LOG_DIR
 
 #MAP=./test/maps/4043743_test.txt
+MAP=./test/maps/4050210_test.txt
 #MAP=./test/maps/4043611_test.txt
 
 #MAP=./test/maps/space_test.txt
@@ -17,7 +18,7 @@ LOG_DIR=./log
 #MAP=./test/maps/dont_split_test.txt
 #MAP=$KIT_DIR/maps/apocalyptic.txt
 #MAP=$KIT_DIR/maps/empty-room.txt
-MAP=$KIT_DIR/maps/huge-room.txt
+#MAP=$KIT_DIR/maps/huge-room.txt
 #MAP=$KIT_DIR/maps/playground.txt
 
 #MYBOT_FILE=./lib/main.rb

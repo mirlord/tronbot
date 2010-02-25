@@ -1,15 +1,4 @@
 
-def timed( msg, &block )
-    from = Time.now
-    yield
-    to = Time.now
-    $stderr.puts "> #{msg}: #{ (to - from) } sec"
-end
-
-def think( *args )
-    $stderr.puts "BT> #{args.join("\n -> ")}\n"
-end
-
 class Fixnum
 
     def inside_i?( from, to )
@@ -317,9 +306,7 @@ class SpaceWidthSearch
     end
 
     def execute
-        count = 0
         @depth.times do
-            think "counting: #{count}"
             merge_intersections
             @spaces.reject! do |si|
                 if si.closed?
@@ -879,9 +866,7 @@ class MirlordBot
 		while(true)
 		
             @map = TronMap.read_new( @history )
-            timed "Bot was thinking for" do
-                makemove
-            end
+            makemove
 
             @map = nil
             @valids = nil
