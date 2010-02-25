@@ -31,7 +31,7 @@ class MirlordBot
 
     def collect_weights
 
-        spaces = analyze_limited_space( @map, @valids )
+        spaces, total_size = analyze_limited_space( @map, @valids )
         if spaces.size == 1 && @rival_presence
             check_rival_presence( @map, spaces.first )
         end
@@ -44,8 +44,6 @@ class MirlordBot
         end
         
         if @rival_presence
-
-            @primary_strategy = :headon
 
             me = @map.my_point
             rival = @map.rival_point
@@ -60,7 +58,7 @@ class MirlordBot
                         iwalls << @map.p( me.x - i * xd.sign, me.y - i * yd.sign , true  )
                     end
                     imap = @map.imagine( iwalls )
-                    ispaces = analyze_limited_space( imap, my_valid_moves( imap ) )
+                    ispaces, total_size = analyze_limited_space( imap, my_valid_moves( imap ) )
                     if ispaces.size > 1
                         ispaces.sort!
                         is_max = ispaces.last
@@ -96,7 +94,7 @@ class MirlordBot
                         end
                     end
                     imap = @map.imagine( iwalls ) # imagined map
-                    ispaces = analyze_limited_space( imap, my_valid_moves( imap ) )
+                    ispaces, total_size = analyze_limited_space( imap, my_valid_moves( imap ) )
                     follow_longest_delta( xd, yd, 1.0, 0.2, 0.1 )
                 end
             elsif ( xd.abs + yd.abs ) == 1
@@ -112,7 +110,6 @@ class MirlordBot
             end
 
         else
-            @primary_strategy = :hugger # yeah, it will be overwritten each time, I don't care
             try_to_keep_hugging
 
             try_not_to_split
@@ -124,10 +121,15 @@ class MirlordBot
 
     def try_not_to_split
         @valids.each do |m|
-            spaces = analyze_limited_space( @map, @valids )
+            spaces, total_size = analyze_limited_space( @map, @valids )
             imap = @map.imagine( [], [m.dst.x, m.dst.y] )
-            ispaces = analyze_limited_space( imap, my_valid_moves( imap ) )
-            @valids[ m.index ].add_weight( 0.8 ) if ispaces.size > spaces.size
+            ispaces, total = analyze_limited_space( imap, my_valid_moves( imap ) )
+            if ispaces.size > spaces.size
+                ispaces.sort!
+                # weight MUST be less than 0.8 (so I subtract 0.2),
+                # but more than zero (so .abs needed)
+                @valids[ m.index ].add_weight( ( ispaces.last.size.to_f / total.to_f - 0.2 ).abs  )
+            end
         end
     end
 
@@ -159,7 +161,7 @@ class MirlordBot
         end
         spaces = sws.execute
         think "Spaces available:\n    #{spaces.join("\n    ")}"
-        return spaces
+        return spaces, sws.total_size
     end
 
     def my_valid_moves( map )
@@ -185,11 +187,11 @@ class MirlordBot
             last_and_valid.uniq!
 
             if last_and_valid.size == 1 && last_and_valid[0] == previous
-                @valids[ previous ].add_weight 1.2
-            elsif last_and_valid.size > 1 && last_and_valid[0] == previous
-                @valids[ previous ].add_weight 1.15
-            elsif last_and_valid.include? previous
                 @valids[ previous ].add_weight 1.1
+            elsif last_and_valid.size > 1 && last_and_valid[0] == previous
+                @valids[ previous ].add_weight 1.05
+            elsif last_and_valid.include? previous
+                @valids[ previous ].add_weight 1.01
             end
         end
 
@@ -202,7 +204,6 @@ class MirlordBot
         @rival_presence = true
         @map = nil
         @valids = nil
-        @primary_strategy = nil
 	
 		while(true)
 		
