@@ -59,8 +59,10 @@ public
         
         x, y = my_coords
         mcopy.my_point = mcopy.p( x, y, true )
+        mcopy.set_wall_at( x, y )
         x, y = rival_coords
         mcopy.rival_point = mcopy.p( x, y, true )
+        mcopy.set_wall_at( x, y )
 
         return mcopy
     end

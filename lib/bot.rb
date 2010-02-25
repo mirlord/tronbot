@@ -11,16 +11,13 @@ class MirlordBot
         @valids = my_valid_moves( @map )
         think "Possible valid moves: #{@valids}"
 
-		if @valids.nsize == 0
+		if @valids.size == 0
 			@map.make_move( 0 )
 		else
-            collect_weights unless @valids.nsize < 2
+            collect_weights unless @valids.size < 2
 
             m = @valids.choose
             m = @valids[ rand(@valids.size) ] if m.nil? # sometimes we can't choose any move
-
-            # It's a protection from errors. Should be enabled only in production
-            #m = @valids[rand(@valids.size)] unless @valids.include?( m ) && (! debug?)
 
             think "Going to make a move: #{m}"
 			m.make
@@ -36,7 +33,7 @@ class MirlordBot
 
         spaces = analyze_limited_space( @map, @valids )
         if spaces.size == 1 && @rival_presence
-            check_rival_presence( spaces.first )
+            check_rival_presence( @map, spaces.first )
         end
 
         if spaces.size > 1
@@ -76,20 +73,11 @@ class MirlordBot
                             @valids[ m.index ].add_weight( 0.8 )
                         end
                     end
-
-                    # *wf => x|y weight factor
-                    xwf = 0.3 * xd.sign
-                    ywf = 0.3 * yd.sign
-
-                    #TODO: create a stub object, which silently takes & forgets the weight
-                    #      to avoid so much 'unless'-es
-                    @valids[ West.index ].add_weight( 1.1 + xwf ) unless @valids[ West.index ].nil?
-                    @valids[ East.index ].add_weight( 1.1 - xwf ) unless @valids[ East.index ].nil?
-                    @valids[ North.index ].add_weight( 1.1 + ywf ) unless @valids[ North.index ].nil?
-                    @valids[ South.index ].add_weight( 1.1 - ywf ) unless @valids[ South.index ].nil?
+                    follow_longest_delta( xd, yd, 1.1, 0.3 )
 
                 elsif xyd > 1
-                    follow_longest_delta( xd, yd )
+                    follow_longest_delta( xd, yd, 1.0, 0.4, 0.2 )
+
                 elsif xyd == 1
                     iwalls = [] # imagined walls
                     if xd.abs < yd.abs
@@ -109,35 +97,55 @@ class MirlordBot
                     end
                     imap = @map.imagine( iwalls ) # imagined map
                     ispaces = analyze_limited_space( imap, my_valid_moves( imap ) )
-                    follow_longest_delta( xd, yd, 0.5 )
+                    follow_longest_delta( xd, yd, 1.0, 0.2, 0.1 )
+                end
+            elsif ( xd.abs + yd.abs ) == 1
+                rvalids = rival_valid_moves( @map )
+                if rvalids.size == 1
+                    rvalids.each do |rm| # will be executed only once, but for only proper rival valid move
+                        imap = @map.imagine( [], nil, [ rm.dst.x, rm.dst.y ] )
+                        irvalids = rival_valid_moves( imap ) # rival imagined valid moves
+                        blocking_move = @valids.intersects?( irvalids )
+                        @valids[ blocking_move.index ].add_weight( 1.8 )
+                    end
                 end
             end
 
         else
-            # TODO: hugging
             @primary_strategy = :hugger # yeah, it will be overwritten each time, I don't care
             try_to_keep_hugging
+
+            try_not_to_split
         end
 
         try_to_keep_direction
 
     end
 
-    def follow_longest_delta( xd, yd, reduce_factor = 1.0 )
+    def try_not_to_split
+        @valids.each do |m|
+            spaces = analyze_limited_space( @map, @valids )
+            imap = @map.imagine( [], [m.dst.x, m.dst.y] )
+            ispaces = analyze_limited_space( imap, my_valid_moves( imap ) )
+            @valids[ m.index ].add_weight( 0.8 ) if ispaces.size > spaces.size
+        end
+    end
+
+    def follow_longest_delta( xd, yd, base_value = 1.0, base_factor = 0.4, diff_factor = 0 )
         # *wf => x|y weight factor
-        xwf = ( 0.4 + 0.2 * (xd.abs - yd.abs).sign ) * xd.sign * reduce_factor
-        ywf = ( 0.4 - 0.2 * (xd.abs - yd.abs).sign ) * yd.sign * reduce_factor
+        xwf = ( base_factor + diff_factor * (xd.abs - yd.abs).sign ) * xd.sign
+        ywf = ( base_factor - diff_factor * (xd.abs - yd.abs).sign ) * yd.sign
 
         #TODO: create a stub object, which silently takes & forgets the weight
         #      to avoid so much 'unless'-es
-        @valids[ West.index ].add_weight( 1.0 + xwf ) unless @valids[ West.index ].nil?
-        @valids[ East.index ].add_weight( 1.0 - xwf ) unless @valids[ East.index ].nil?
-        @valids[ North.index ].add_weight( 1.0 + ywf ) unless @valids[ North.index ].nil?
-        @valids[ South.index ].add_weight( 1.0 - ywf ) unless @valids[ South.index ].nil?
+        @valids[ West.index ].add_weight( base_value + xwf ) unless @valids[ West.index ].nil?
+        @valids[ East.index ].add_weight( base_value - xwf ) unless @valids[ East.index ].nil?
+        @valids[ North.index ].add_weight( base_value + ywf ) unless @valids[ North.index ].nil?
+        @valids[ South.index ].add_weight( base_value - ywf ) unless @valids[ South.index ].nil?
     end
 
     def try_to_keep_hugging
-        
+        # TODO: hugging
     end
 
     def analyze_limited_space( map, valids )
@@ -154,21 +162,21 @@ class MirlordBot
 		return ValidMovesArray.new( North.new( map ), East.new( map ), South.new( map ), West.new( map ) )
     end
 
-    def rival_valid_moves
-        rp = @map.rival_point
-		return ValidMovesArray.new( North.new( @map, rp ), East.new( @map, rp ), South.new( @map, rp ), West.new( @map, rp ) )
+    def rival_valid_moves( map )
+        rp = map.rival_point
+		return ValidMovesArray.new( North.new( map, rp ), East.new( map, rp ), South.new( map, rp ), West.new( map, rp ) )
     end
 
-    def check_rival_presence( space_info )
-        rvalids = rival_valid_moves
+    def check_rival_presence( map, space_info )
+        rvalids = rival_valid_moves( map )
         @rival_presence = ! ((rvalids.map { |rm| rm.dst }) & space_info.contents).empty?
     end
 
     def try_to_keep_direction
 
         previous = @history.last
-        unless previous.nil? || ! @valids.include?( previous )
-            last_and_valid = @history.last( 5 ).select { |m| @valids.include? m }
+        unless previous.nil? || ! @valids.include_index?( previous )
+            last_and_valid = @history.last( 5 ).select { |mi| @valids.include_index? mi }
             #think "Trying to keep last from: #{last_and_valid}, while prev was: #{previous}"
             last_and_valid.uniq!
 
@@ -176,7 +184,7 @@ class MirlordBot
                 @valids[ previous ].add_weight 1.2
             elsif last_and_valid.size > 1 && last_and_valid[0] == previous
                 @valids[ previous ].add_weight 1.15
-            elsif last_and_valid.include? previous
+            elsif last_and_valid.include_index? previous
                 @valids[ previous ].add_weight 1.1
             end
         end

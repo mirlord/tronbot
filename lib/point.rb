@@ -13,7 +13,6 @@ class Point
         @map = map
         @x = x
         @y = y
-        @space = nil
     end
 
     def sibling( direction, withwalls = true )
@@ -40,23 +39,6 @@ class Point
         @map.p( @x + 1, @y, withwalls )
     end
 
-    def space( direction_name )
-        @space = @map.calculate_space( self ) if @space.nil?
-
-        case direction_name
-            when :north
-                @space[1] + @space[2] + @space[3]
-            when :east
-                @space[3] + @space[5] + @space[8]
-            when :south
-                @space[6] + @space[7] + @space[8]
-            when :west
-                @space[1] + @space[4] + @space[6]
-            else
-                0
-        end
-    end
-
     def wall?
         @map.wall?( @x, @y )
     end
@@ -70,12 +52,20 @@ class Point
     end
 
     def eql?( comp )
-        return true if super( comp )
+        #return true if super( comp )
         self.x == comp.x && self.y == comp.y
     end
 
+    def <=>( comp )
+        return 0 if self == comp
+    end
+
+    def equal?
+        self.eql?( comp )
+    end
+
     def ==( comp )
-        return true if super( comp )
+        #return true if super( comp )
         self.eql?( comp )
     end
 

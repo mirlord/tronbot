@@ -26,16 +26,27 @@ class ValidMovesArray
         return r
     end
 
-    def opposite?
-        ( nsize == 2) && ( ( @moves[0].nil? && @moves[2].nil? ) || ( @moves[1].nil? && @moves[3].nil? )  )
+    def include?( move )
+        @moves.include?( move )
     end
+
+    def intersects?( valids )
+        each do |m|
+            return m if valids.include?( m )
+        end
+        return false
+    end
+
+    #def opposite?
+        #( size == 2) && ( ( @moves[0].nil? && @moves[2].nil? ) || ( @moves[1].nil? && @moves[3].nil? )  )
+    #end
     
-    def nsize
+    def size
         @moves.size - @moves.nils_count
         #self.compact.size
     end
 
-    def include?( mindex )
+    def include_index?( mindex )
         ! @moves[ mindex ].nil?
     end
 
