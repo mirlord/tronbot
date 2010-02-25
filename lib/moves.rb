@@ -46,6 +46,10 @@ class ValidMovesArray
         #self.compact.size
     end
 
+    def empty?
+        size == 0
+    end
+
     def include_index?( mindex )
         ! @moves[ mindex ].nil?
     end
