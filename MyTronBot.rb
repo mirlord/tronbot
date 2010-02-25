@@ -1,8 +1,4 @@
 
-def debug?
-    ARGV.include?( '--debug' )
-end
-
 class Fixnum
 
     def inside_i?( from, to )
@@ -54,31 +50,8 @@ class NilClass
 
 end
 
-module TronUtils
-
-    def think( *args )
-    end
-
-    def think( *args )
-        $stderr.puts "BT> #{args.join("\n -> ")}\n"
-    end if debug?
-
-    def timed( msg, &block )
-        from = Time.now
-        yield
-        to = Time.now
-        $stderr.puts "> #{msg}: #{ (to - from) } sec"
-    end
-
-end
-
-
-
-
 class Map
     
-    include TronUtils
-
 protected
 
     attr_writer :my_point, :rival_point
@@ -252,12 +225,7 @@ public
 	
 end
 
-
-
-
 class Point
-
-    include TronUtils
 
     attr_reader :x, :y
 
@@ -321,12 +289,7 @@ class Point
 
 end
 
-
-
-
 class SpaceWidthSearch
-
-    include TronUtils
 
     DEPTH_LIMIT_DEFAULT=100
 
@@ -379,8 +342,6 @@ class SpaceWidthSearch
 end
 
 class SpaceInfo
-
-    include TronUtils
 
     attr_reader :starting_moves, :boundaries, :contents
 
@@ -444,11 +405,7 @@ class SpaceInfo
 
 end
 
-
-
 class ValidMovesArray
-
-    include TronUtils
 
     def initialize( *moves )
         @moves = Array.new( moves.size, nil )
@@ -522,7 +479,6 @@ end
 
 class Move
     
-    include TronUtils
     include Comparable
 
     BASE_WEIGHT = 1.0
@@ -663,12 +619,7 @@ class West < Move
 
 end
 
-
-
-
 class MirlordBot
-
-    include TronUtils
 
 	def makemove
 	    
@@ -861,12 +812,8 @@ class MirlordBot
 	
 		while(true)
 		
-            #timed 'Map parsed in' do
-                @map = Map.read_new( @history )
-            #end
-            #timed 'Bot was thinking for' do
-			    makemove
-			#end
+            @map = Map.read_new( @history )
+            makemove
 
             @map = nil
             @valids = nil
@@ -875,8 +822,6 @@ class MirlordBot
 	end
 	
 end
-
-
 
 MirlordBot.new()
 
