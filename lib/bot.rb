@@ -155,11 +155,8 @@ class MirlordBot
                     next
                 end
                 irspaces, _ = analyze_limited_space( imap, rivalids )
-                think "=== rvalids: #{rival_valid_moves( imap )}"
                 ispaces.sort!
-                think "=== ispaces: #{ispaces}"
                 irspaces.sort!
-                think "=== irspaces: #{irspaces}"
                 if ispaces.last.size < irspaces.last.size
                     @valids[ my_move.index ].add_weight( 0.4 )
                 end

@@ -213,8 +213,6 @@ public
 		
 	end
 
-
-
 	def make_move(direction)
 
 		$stdout << direction
@@ -742,7 +740,8 @@ class MirlordBot
                 end
             end
 
-            try_to_predict_splits
+            # TODO: need optimization
+            #try_to_predict_splits
 
         else
             try_to_keep_hugging
