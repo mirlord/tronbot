@@ -78,13 +78,19 @@ class MirlordBot
 
                 elsif xyd == 1
                     iwalls = [] # imagined walls
+                    my_icoords = []
+                    rival_icoords = []
+                    cutting_move_index = 0
                     if xd.abs < yd.abs
                         (1..(xd.abs)).each do |i|
                             iwalls << @map.p( me.x - i * xd.sign, me.y, true  )
                         end
-                        (1..(yd.abs)).each do |i|
+                        (1..(yd.abs - 1)).each do |i|
                             iwalls << @map.p( rival.x, rival.y + i * yd.sign, true  )
                         end
+                        my_icoords = [ me.x - xd, me.y ]
+                        rival_icoords = [ rival.x, rival.y + (yd.abs-1)*yd.sign ]
+                        cutting_move_index = xd < 0 ? East.index : West.index
                     else
                         (1..(yd.abs)).each do |i|
                             iwalls << @map.p( me.x, me.y - i * yd.sign, true  )
@@ -92,9 +98,19 @@ class MirlordBot
                         (1..(xd.abs)).each do |i|
                             iwalls << @map.p( rival.x + i * xd.sign, rival.y, true  )
                         end
+                        my_icoords = [ me.x, me.y - yd ]
+                        rival_icoords = [ rival.x + (xd.abs-1)*xd.sign, rival.y ]
+                        cutting_move_index = yd < 0 ? South.index : North.index
                     end
-                    imap = @map.imagine( iwalls ) # imagined map
-                    ispaces, total_size = analyze_limited_space( imap, my_valid_moves( imap ) )
+                    imap = @map.imagine( iwalls, my_icoords, rival_icoords ) # imagined map
+                    ispaces, _ = analyze_limited_space( imap, my_valid_moves( imap ) )
+                    rival_ispaces, _ = analyze_limited_space( imap, rival_valid_moves( imap ) )
+                    ispaces.sort!
+                    rival_ispaces.sort!
+                    if ispaces.last.size > rival_ispaces.last.size
+                        # cut it!
+                        @valids[ cutting_move_index ].add_weight( 1.9 )
+                    end
                     follow_longest_delta( xd, yd, 1.0, 0.2, 0.1 )
                 end
             elsif ( xd.abs + yd.abs ) == 1
@@ -208,7 +224,7 @@ class MirlordBot
 		while(true)
 		
             timed 'Map parsed in' do
-                @map = Map.read_new( @history )
+                @map = TronMap.read_new( @history )
             end
             timed 'Bot was thinking for' do
 			    makemove

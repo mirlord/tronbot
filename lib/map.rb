@@ -1,7 +1,7 @@
 
 require 'lib/utils'
 
-class Map
+class TronMap
     
     include TronUtils
 
@@ -39,7 +39,7 @@ public
     protected :set_wall_at
 
     def self.read_new( history = [] )
-        m = Map.new( history )
+        m = TronMap.new( history )
         m.read_map
         return m
     end
