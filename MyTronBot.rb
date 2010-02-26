@@ -504,7 +504,7 @@ class ValidMovesArray
         if m.nil?
             m = choose_random
         end
-        think "Anyway choice is #{m}"
+        #think "Anyway choice is #{m}"
         return m
     end
 
@@ -515,7 +515,7 @@ class ValidMovesArray
     def choose_optimal
 
         sorted = @moves.sort.compact
-        think "Choosing from: #{@moves}"
+        #think "Choosing from: #{@moves}"
 
         return nil if sorted.empty? || ( sorted.last.weight == sorted.first.weight )
         return sorted.last
@@ -791,17 +791,17 @@ class MirlordBot
                         end
                     end
                 elsif ( xd.abs + yd.abs ) == 1
-                    think "Blocking?"
+                    #think "Blocking?"
                     rvalids = rival_valid_moves( @map )
                     if rvalids.size == 1
-                        think "He has no chances!"
+                        #think "He has no chances!"
                         rvalids.each do |rm| # will be executed only once, but for only proper rival valid move
                             imap = @map.imagine( [], nil, [ rm.dst.x, rm.dst.y ] )
-                            think "He will go to #{rm.dst}"
+                            #think "He will go to #{rm.dst}"
                             irvalids = rival_valid_moves( imap ) # rival imagined valid moves
-                            think "And then to #{irvalids}"
+                            #think "And then to #{irvalids}"
                             blocking_move = @valids.intersects?( irvalids )
-                            think "I can block it by going to: #{blocking_move}"
+                            #think "I can block it by going to: #{blocking_move}"
                             @valids[ blocking_move.index ].add_weight( 1.8 )
                         end
                     end
@@ -857,10 +857,10 @@ class MirlordBot
         spaces, _ = base_spaces
         moves.each do |m|
             if m.has_front_points?
-                think "Trying not to split for: #{m}"
+                #think "Trying not to split for: #{m}"
                 imap = @map.imagine( [], [m.dst.x, m.dst.y] )
                 ispaces, total = analyze_limited_space( imap, my_valid_moves( imap ) )
-                think "isp=#{ispaces.last.size.to_f}; total=#{total.to_f}; s=#{ispaces.size}"
+                #think "isp=#{ispaces.last.size.to_f}; total=#{total.to_f}; s=#{ispaces.size}"
                 if ispaces.size > 1
                     ispaces.sort!
                     @valids[ m.index ].add_weight( ( ispaces.last.size.to_f / total.to_f ) * 0.7 )
