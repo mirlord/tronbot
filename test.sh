@@ -11,7 +11,7 @@ LOG_DIR=./log
 #MAP=./test/maps/4043743_test.txt
 #MAP=./test/maps/4050210_test.txt
 #MAP=./test/maps/4043611_test.txt
-MAP=./test/maps/4074990_test.txt
+#MAP=./test/maps/4074990_test.txt
 
 #MAP=./test/maps/space_test.txt
 #MAP=./test/maps/long_coord_test.txt
@@ -19,6 +19,7 @@ MAP=./test/maps/4074990_test.txt
 #MAP=./test/maps/dont_split_test.txt
 #MAP=./test/maps/blocking_test.txt
 #MAP=./test/maps/dont_split_from_split.txt
+MAP=./test/maps/corners_test.txt
 #MAP=$KIT_DIR/maps/apocalyptic.txt
 #MAP=$KIT_DIR/maps/empty-room.txt
 #MAP=$KIT_DIR/maps/huge-room.txt
