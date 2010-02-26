@@ -13,6 +13,7 @@ LOG_DIR=./log
 #MAP=./test/maps/4043611_test.txt
 #MAP=./test/maps/4074990_test.txt
 
+MAP=./test/maps/avoid_cutoff_test.txt
 #MAP=./test/maps/space_test.txt
 #MAP=./test/maps/long_coord_test.txt
 #MAP=./test/maps/headon_symmetric_test.txt
@@ -21,7 +22,7 @@ LOG_DIR=./log
 #MAP=./test/maps/dont_split_from_split.txt
 #MAP=./test/maps/corners_test.txt
 #MAP=./test/maps/headon_test.txt
-MAP=./test/maps/headon_straight_avoid_test.txt
+#MAP=./test/maps/headon_straight_avoid_test.txt
 #MAP=$KIT_DIR/maps/apocalyptic.txt
 #MAP=$KIT_DIR/maps/empty-room.txt
 #MAP=$KIT_DIR/maps/huge-room.txt
@@ -40,7 +41,7 @@ RIVAL_CMD="$JAVA_CMD -jar $RIVAL_FILE"
 
 if [ "$1" = "-a" ]; then
     rm $LOG_DIR/fight.log
-    for i in $KIT_DIR/maps/*.txt; do
+    for i in $KIT_DIR/maps/*.txt ./test/maps/*.txt; do
        $JAVA_CMD -jar $KIT_DIR/engine/Tron.jar $i "$MYBOT_CMD" "$RIVAL_CMD" 0 1 2>&1 >> $LOG_DIR/fight.log
     done
 else

@@ -331,10 +331,11 @@ class SpaceWidthSearch
 
     attr_reader :total_size
 
-    def initialize( map )
+    def initialize( map, reduce_deep_factor )
         @spaces = []
         @done = []
         @map = map
+        @deep = DEPTH_LIMIT_DEFAULT / reduce_deep_factor
         @total_size = 0
     end
 
@@ -750,14 +751,14 @@ class MirlordBot
                     case xyd
                     when 0
                         try_to_headon_diag
-                        follow_longest_delta( xd, yd, 1.1, 0.3 )
+                        follow_delta( :long, xd, yd, 1.1, 0.3 )
 
                     when 1
                         #try_to_cut( me, rival ) #it's a bullshit!
-                        follow_longest_delta( xd, yd, 1.0, 0.4, 0.2 )
+                        follow_delta( :long, xd, yd, 1.0, 0.4, 0.2 )
 
                     else
-                        follow_longest_delta( xd, yd, 1.0, 0.4, 0.2 )
+                        follow_delta( :long, xd, yd, 1.0, 0.4, 0.2 )
 
                     end
                 end
@@ -777,11 +778,40 @@ class MirlordBot
             end
         end
 
-        #try_to_keep_direction
-
     end
 
     def try_not_to_be_cutoff
+        me = @map.my_point
+        rival = @map.rival_point
+        xd = me.x - rival.x
+        yd = me.y - rival.y
+
+        cutoff_moves = []
+        @rival_valids.each do |rm|
+            cutoff_moves << rm if (me.x - rm.dst.x).abs + (me.y - rm.dst.y).abs == 2
+        end
+        #think "Cutoffs: #{cutoff_moves}"
+        return follow_delta( :short, xd, yd, 1.0, 0.4, 0.2 ) if cutoff_moves.empty?
+
+        my_moves = []
+        @valids.each do |m|
+            my_moves << m if (m.dst.x - rival.x).abs + (m.dst.y - rival.y).abs == 2
+        end
+        return follow_delta( :long, xd, yd, 1.0, 0.4, 0.2 ) if my_moves.empty?
+        
+        cutoff_moves.each do |m|
+            imap = @map.imagine( [], nil, [ m.dst.x, m.dst.y ] )
+            ispaces, _ = analyze_limited_space( imap, my_valid_moves( imap ), 2 )
+            if ispaces.size > 1
+                ispaces.sort!
+                ispaces.last.starting_moves.each do |m|
+                    @valids[ m.index ].add_weight( 1.9 ) unless @valids[ m.index ].nil?
+                end
+            else
+                return follow_delta( :long, xd, yd, 1.0, 0.4, 0.2 ) if my_moves.empty?
+            end
+        end
+        
     end
 
     def check_draw_profit
@@ -793,9 +823,7 @@ class MirlordBot
         xd = me.x - rival.x
         yd = me.y - rival.y
 
-        if (xd.abs - yd.abs) == 0
-            #TODO
-        else # (xd.abs - yd.abs).abs == 2
+        if (xd.abs - yd.abs) == 2 # unless (xd.abs - yd.abs).abs == 0
             #think "Checking draw profit for straight head-on"
             rival_icoords = [ me.x - xd.sign, me.y - yd.sign ]
             imap = @map.imagine( [], nil, rival_icoords )
@@ -865,7 +893,7 @@ class MirlordBot
                 # cut it!
                 @valids[ cutting_move_index ].add_weight( 1.9 ) unless @valids[ cutting_move_index ].nil?
             end
-            follow_longest_delta( xd, yd, 1.0, 0.2, 0.1 )
+            follow_delta( :long, xd, yd, 1.0, 0.2, 0.1 )
         end
     end
 
@@ -962,9 +990,10 @@ class MirlordBot
         end
     end
 
-    def follow_longest_delta( xd, yd, base_value = 1.0, base_factor = 0.4, diff_factor = 0 )
-        xwf = ( base_factor + diff_factor * (xd.abs - yd.abs).sign ) * xd.sign
-        ywf = ( base_factor - diff_factor * (xd.abs - yd.abs).sign ) * yd.sign
+    def follow_delta( direction, xd, yd, base_value = 1.0, base_factor = 0.4, diff_factor = 0 )
+        direction_factor = (direction == :long) ? 1 : -1 # else :short
+        xwf = ( base_factor + diff_factor * (xd.abs - yd.abs).sign * direction_factor ) * xd.sign
+        ywf = ( base_factor - diff_factor * (xd.abs - yd.abs).sign * direction_factor ) * yd.sign
 
         @valids[ West.index ].add_weight( base_value + xwf ) unless @valids[ West.index ].nil?
         @valids[ East.index ].add_weight( base_value - xwf ) unless @valids[ East.index ].nil?
@@ -993,8 +1022,8 @@ class MirlordBot
         end
     end
 
-    def analyze_limited_space( map, valids )
-        sws = SpaceWidthSearch.new( map )
+    def analyze_limited_space( map, valids, reduce_deep_factor = 1 )
+        sws = SpaceWidthSearch.new( map, reduce_deep_factor )
         valids.each do |m|
             sws.add_starting_move( m )
         end
