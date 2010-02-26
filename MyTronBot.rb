@@ -327,7 +327,7 @@ end
 
 class SpaceWidthSearch
 
-    DEPTH_LIMIT_DEFAULT=15
+    DEPTH_LIMIT_DEFAULT=225
 
     attr_reader :total_size
 
@@ -335,7 +335,6 @@ class SpaceWidthSearch
         @spaces = []
         @done = []
         @map = map
-        @depth = DEPTH_LIMIT_DEFAULT
         @total_size = 0
     end
 
@@ -344,11 +343,10 @@ class SpaceWidthSearch
     end
 
     def execute
-        @depth.times do
+        while @total_size < DEPTH_LIMIT_DEFAULT
             merge_intersections
             @spaces.reject! do |si|
                 if si.closed?
-                    @total_size += si.size
                     @done << si
                 end
             end
@@ -357,13 +355,14 @@ class SpaceWidthSearch
 
             @spaces.each do |si|
                 si.pop_each do |p|
+                    @total_size += 1
                     si.push( p.siblings( false ) )
                 end
             end
         end
         @done += @spaces
         @spaces.each do |si|
-            @total_size += si.size
+            @total_size += si.boundaries.size
         end
         return @done
     end
@@ -473,12 +472,13 @@ class ValidMovesArray
         @moves.include?( move )
     end
 
-    def intersects?( moves )
+    def intersection( moves )
         dsts = moves.map { |m| m.dst }
+        r = []
         each do |m|
-            return m if dsts.include?( m.dst )
+            r << m if dsts.include?( m.dst )
         end
-        return false
+        return r
     end
 
     def size
@@ -634,7 +634,6 @@ class Move
         @front_move = self.class.new( @map, @dst ) if @front_move.nil?
         return @front_move
     end
-    private :front_move
 
     def has_front_points?
         return ( ! front_move.possible? || front_move.along_wall? ) ? true : false
@@ -695,6 +694,7 @@ class MirlordBot
 	def makemove
 
         @valids = my_valid_moves( @map )
+        @rival_valids = rival_valid_moves( @map )
 
 		if @valids.size == 0
 			@map.make_move( West.cvalue )
@@ -719,7 +719,7 @@ class MirlordBot
 
         spaces = @spaces_base
         if spaces.size == 1 && @rival_presence
-            check_rival_presence( @map, spaces.first )
+            check_rival_presence( spaces.first )
         end
 
         if spaces.size > 1
@@ -737,86 +737,28 @@ class MirlordBot
                 yd = me.y - rival.y
                 xyd = ( xd.abs - yd.abs ).abs
 
-                if ( xd.abs + yd.abs ) > 2
-                    if xyd == 0
-                        iwalls = [] # imagined walls
-                        (1..(xd.abs-1)).each do |i|
-                            iwalls << @map.p( me.x - i * xd.sign, me.y - i * yd.sign , true  )
-                        end
-                        imap = @map.imagine( iwalls )
-                        ispaces, total_size = analyze_limited_space( imap, my_valid_moves( imap ) )
-                        if ispaces.size > 1
-                            ispaces.sort!
-                            is_max = ispaces.last
-                            is_max.starting_moves.each do |m|
-                                @valids[ m.index ].add_weight( 1.2 )
-                            end
+                if ( xd.abs + yd.abs ) == 1
+                    try_to_block
 
-                            is_min = ispaces.first
-                            is_min.starting_moves.each do |m|
-                                @valids[ m.index ].add_weight( 0.8 )
-                            end
-                        end
+                elsif ( xd.abs + yd.abs ) == 3 && xyd == 1
+                    try_not_to_be_cutoff
+
+                elsif ( xd.abs + yd.abs ) == 2
+                    check_draw_profit
+
+                else
+                    case xyd
+                    when 0
+                        try_to_headon_diag
                         follow_longest_delta( xd, yd, 1.1, 0.3 )
 
-                    elsif xyd > 1
+                    when 1
+                        #try_to_cut( me, rival ) #it's a bullshit!
                         follow_longest_delta( xd, yd, 1.0, 0.4, 0.2 )
 
-                    elsif xyd == 1
-                        iwalls = [] # imagined walls
-                        my_icoords = []
-                        rival_icoords = []
-                        cutting_move_index = 0
-                        if xd.abs < yd.abs
-                            (1..(xd.abs)).each do |i|
-                                iwalls << @map.p( me.x - i * xd.sign, me.y, true  )
-                            end
-                            (1..(yd.abs - 1)).each do |i|
-                                iwalls << @map.p( rival.x, rival.y + i * yd.sign, true  )
-                            end
-                            my_icoords = [ me.x - xd, me.y ]
-                            rival_icoords = [ rival.x, rival.y + (yd.abs-1)*yd.sign ]
-                            cutting_move_index = xd < 0 ? East.index : West.index
-                        else
-                            (1..(yd.abs)).each do |i|
-                                iwalls << @map.p( me.x, me.y - i * yd.sign, true  )
-                            end
-                            (1..(xd.abs)).each do |i|
-                                iwalls << @map.p( rival.x + i * xd.sign, rival.y, true  )
-                            end
-                            my_icoords = [ me.x, me.y - yd ]
-                            rival_icoords = [ rival.x + (xd.abs-1)*xd.sign, rival.y ]
-                            cutting_move_index = yd < 0 ? South.index : North.index
-                        end
-                        imap = @map.imagine( iwalls, my_icoords, rival_icoords ) # imagined map
-                        ivalids = my_valid_moves( imap )
-                        irvalids = rival_valid_moves( imap )
-                        if ivalids.size > 0 && irvalids.size > 0
-                            ispaces, _ = analyze_limited_space( imap, ivalids )
-                            rival_ispaces, _ = analyze_limited_space( imap, irvalids )
-                            ispaces.sort! if ispaces.size > 1
-                            rival_ispaces.sort! if rival_ispaces.size > 1
-                            if ispaces.last.size > rival_ispaces.last.size
-                                # cut it!
-                                @valids[ cutting_move_index ].add_weight( 1.9 ) unless @valids[ cutting_move_index ].nil?
-                            end
-                            follow_longest_delta( xd, yd, 1.0, 0.2, 0.1 )
-                        end
-                    end
-                elsif ( xd.abs + yd.abs ) == 1
-                    #think "Blocking?"
-                    rvalids = rival_valid_moves( @map )
-                    if rvalids.size == 1
-                        #think "He has no chances!"
-                        rvalids.each do |rm| # will be executed only once, but for only proper rival valid move
-                            imap = @map.imagine( [], nil, [ rm.dst.x, rm.dst.y ] )
-                            #think "He will go to #{rm.dst}"
-                            irvalids = rival_valid_moves( imap ) # rival imagined valid moves
-                            #think "And then to #{irvalids}"
-                            blocking_move = @valids.intersects?( irvalids )
-                            #think "I can block it by going to: #{blocking_move}"
-                            @valids[ blocking_move.index ].add_weight( 1.8 )
-                        end
+                    else
+                        follow_longest_delta( xd, yd, 1.0, 0.4, 0.2 )
+
                     end
                 end
 
@@ -839,8 +781,146 @@ class MirlordBot
 
     end
 
+    def try_not_to_be_cutoff
+    end
+
+    def check_draw_profit
+        draw_moves = @valids.intersection( @rival_valids )
+        return if draw_moves.empty?
+
+        me = @map.my_point
+        rival = @map.rival_point
+        xd = me.x - rival.x
+        yd = me.y - rival.y
+
+        if (xd.abs - yd.abs) == 0
+            #TODO
+        else # (xd.abs - yd.abs).abs == 2
+            #think "Checking draw profit for straight head-on"
+            rival_icoords = [ me.x - xd.sign, me.y - yd.sign ]
+            imap = @map.imagine( [], nil, rival_icoords )
+            my_ispaces, _ = analyze_limited_space( imap, my_valid_moves( imap ) )
+            #think "Spaces: #{my_ispaces}"
+            if my_ispaces.size == 1
+                draw_moves.each do |dm|
+                    @valids[ dm.index ].add_weight( 0.85 ) unless @valids[ dm.index ].nil?
+                end
+            else # my_ispaces.size == 2 # more is impossible
+                my_ispaces.sort!
+                if (my_ispaces.last.size - my_ispaces.first.size) == 0
+                    draw_moves.each do |dm|
+                        @valids[ dm.index ].add_weight( 2.0 ) unless @valids[ dm.index ].nil?
+                    end
+                else
+                    s_max = my_ispaces.last
+                    s_max.starting_moves.each do |m|
+                        @valids[ m.index ].add_weight( 2.0 )
+                    end
+                end
+            end
+        end
+    end
+
+    def try_to_cut
+        me = @map.my_point
+        rival = @map.rival_point
+        xd = me.x - rival.x
+        yd = me.y - rival.y
+        xyd = ( xd.abs - yd.abs ).abs
+
+        iwalls = [] # imagined walls
+        my_icoords = []
+        rival_icoords = []
+        cutting_move_index = 0
+        if xd.abs < yd.abs
+            (1..(xd.abs)).each do |i|
+                iwalls << @map.p( me.x - i * xd.sign, me.y, true  )
+            end
+            (1..(yd.abs - 1)).each do |i|
+                iwalls << @map.p( rival.x, rival.y + i * yd.sign, true  )
+            end
+            my_icoords = [ me.x - xd, me.y ]
+            rival_icoords = [ rival.x, rival.y + (yd.abs-1)*yd.sign ]
+            cutting_move_index = xd < 0 ? East.index : West.index
+        else
+            (1..(yd.abs)).each do |i|
+                iwalls << @map.p( me.x, me.y - i * yd.sign, true  )
+            end
+            (1..(xd.abs)).each do |i|
+                iwalls << @map.p( rival.x + i * xd.sign, rival.y, true  )
+            end
+            my_icoords = [ me.x, me.y - yd ]
+            rival_icoords = [ rival.x + (xd.abs-1)*xd.sign, rival.y ]
+            cutting_move_index = yd < 0 ? South.index : North.index
+        end
+        imap = @map.imagine( iwalls, my_icoords, rival_icoords ) # imagined map
+        ivalids = my_valid_moves( imap )
+        irvalids = rival_valid_moves( imap )
+        if ivalids.size > 0 && irvalids.size > 0
+            ispaces, _ = analyze_limited_space( imap, ivalids )
+            rival_ispaces, _ = analyze_limited_space( imap, irvalids )
+            ispaces.sort! if ispaces.size > 1
+            rival_ispaces.sort! if rival_ispaces.size > 1
+            if ispaces.last.size > rival_ispaces.last.size
+                # cut it!
+                @valids[ cutting_move_index ].add_weight( 1.9 ) unless @valids[ cutting_move_index ].nil?
+            end
+            follow_longest_delta( xd, yd, 1.0, 0.2, 0.1 )
+        end
+    end
+
+    def try_to_headon_diag
+        me = @map.my_point
+        rival = @map.rival_point
+        xd = me.x - rival.x
+        yd = me.y - rival.y
+        xyd = ( xd.abs - yd.abs ).abs
+
+        iwalls = [] # imagined walls
+        (1..(xd.abs-1)).each do |i|
+            iwalls << @map.p( me.x - i * xd.sign, me.y - i * yd.sign , true  )
+        end
+        imap = @map.imagine( iwalls )
+        ispaces, total_size = analyze_limited_space( imap, my_valid_moves( imap ) )
+        if ispaces.size > 1
+            ispaces.sort!
+            is_max = ispaces.last
+            is_max.starting_moves.each do |m|
+                @valids[ m.index ].add_weight( 1.2 )
+            end
+
+            is_min = ispaces.first
+            is_min.starting_moves.each do |m|
+                @valids[ m.index ].add_weight( 0.8 )
+            end
+        end
+    end
+
+    def try_to_block
+        me = @map.my_point
+        rival = @map.rival_point
+        xd = me.x - rival.x
+        yd = me.y - rival.y
+        xyd = ( xd.abs - yd.abs ).abs
+
+        #think "Blocking?"
+        rvalids = @rival_valids
+        if rvalids.size == 1
+            #think "He has no chances!"
+            rvalids.each do |rm| # will be executed only once, but for only proper rival valid move
+                imap = @map.imagine( [], nil, [ rm.dst.x, rm.dst.y ] )
+                #think "He will go to #{rm.dst}"
+                irvalids = rival_valid_moves( imap ) # rival imagined valid moves
+                #think "And then to #{irvalids}"
+                blocking_move = @valids.intersection( irvalids ).first
+                #think "I can block it by going to: #{blocking_move}"
+                @valids[ blocking_move.index ].add_weight( 1.8 ) unless blocking_move.nil? || @valids[ blocking_move.index ]
+            end
+        end
+    end
+
     def try_to_predict_splits
-        rvalids = rival_valid_moves( @map )
+        rvalids = @rival_valids
         @valids.each do |my_move|
             rvalids.each do |r_move|
                 imap = @map.imagine( [], [my_move.dst.x, my_move.dst.y], [r_move.dst.x, r_move.dst.y] )
@@ -931,8 +1011,8 @@ class MirlordBot
 		return ValidMovesArray.new( North.new( map, rp ), East.new( map, rp ), South.new( map, rp ), West.new( map, rp ) )
     end
 
-    def check_rival_presence( map, space_info )
-        rvalids = rival_valid_moves( map )
+    def check_rival_presence( space_info )
+        rvalids = @rival_valids
         presence = ! ((rvalids.map { |rm| rm.dst }) & space_info.contents).empty?
         if presence # 100% confirmed
             #think "100% presence confirmed"
