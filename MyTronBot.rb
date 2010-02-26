@@ -52,6 +52,22 @@ class Array
         return first if ! empty? # So in case of empty aray result is 'nil'
     end
 
+    def nsize
+        compact.size
+    end
+
+    def nlast
+        self.reverse_each do |e|
+            return e if ! e.nil?
+        end
+    end
+
+    def nfirst
+        self.each do |e|
+            return e if ! e.nil?
+        end
+    end
+
 end
 
 class NilClass
@@ -65,17 +81,17 @@ class NilClass
 end
 
 class TronMap
-    
+
 protected
 
     attr_writer :my_point, :rival_point
-    
+
 public
 
     attr_reader :width, :height, :history, :my_point, :rival_point
-	
+
 	def initialize( history = [] )
-	
+
         @history = history
         @width = -1
         @height = -1
@@ -83,7 +99,7 @@ public
         @my_point = nil
         @rival_point = nil
         @points = nil
-		
+
 	end
 
     def initialize_copy( from_map )
@@ -113,7 +129,7 @@ public
 
         my_coords = [self.my_point.x, self.my_point.y] if my_coords.nil?
         rival_coords = [self.rival_point.x, self.rival_point.y] if rival_coords.nil?
-        
+
         x, y = my_coords
         mcopy.my_point = mcopy.p( x, y, true )
         mcopy.set_wall_at( x, y )
@@ -125,74 +141,74 @@ public
     end
 
 	def read_map
-	
+
 		begin
-		
+
 			firstline = $stdin.readline("\n")
 			width, height = firstline.split(" ")
 			@width = width.to_i
 			@height = height.to_i
 
             @points = Array.new( @width ) { Array.new( @height ) }
-			
+
 			if height == 0 or width == 0
 				p "OOPS!: invalid map dimensions: " + firstline
 				exit(1)
 			end
-			
+
 			lines = []
 			@height.times do
                 l = $stdin.readline("\n").chomp
 				lines << l
 			end
 			board = lines.join("")
-			
+
 			@walls = board.split(//).map{|char| char == " " ? nil : true}
-			
+
 			p1start = board.index("1").to_i
 			p2start = board.index("2").to_i
-			
+
 			if board.split(//).select{|char| char == "1"}.size > 1
 				$stderr.puts "OOPS!: found more than 1 location for player 1"
 				exit(1)
 			end
-			
+
 			if board.split(//).select{|char| char == "2"}.size > 1
 				$stderr.puts "OOPS!: found more than 1 location for player 2"
 				exit(1)
 			end
-			
+
 			$stderr.puts "OOPS!: Cannot find locations." if p1start == nil or p2start == nil
-			
+
 			px = p1start % @width
 			py = (p1start / @width)
 			@my_point = p( px, py, true )
-			
+
 			px = p2start % @width
 			py = (p2start / @width)
 			@rival_point = p( px, py, true )
-					
-			
+
+
 		rescue EOFError => e
 			exit(0)
-			
+
 		rescue => e
 			$stderr.puts  e
 			exit(1)
 		end
-	
+
 	end
 
 	def each(&proc)
-		
+
 		(0..@height-1).each{|y|
 			(0..@width-1).each{|x|
 				proc[x, y, wall?(x, y)]
 			}
 		}
-		
+
 	end
-	
+
 	def wall? (x, y)
 		return true if x < 0 or y < 0 or x >= @width or y >= @height
 		return @walls[x+@width*y]
@@ -213,7 +229,7 @@ public
 
 		out = ""
 		counter = 0
-				
+
 		@height.times do
 			@width.times do
 				out += @walls[counter] == true ? "#" : "-"
@@ -221,10 +237,10 @@ public
 			end
 			out += "\n"
 		end
-		
-		
+
+
 		return out
-		
+
 	end
 
 	def make_move(direction)
@@ -232,9 +248,9 @@ public
 		$stdout << direction
 		$stdout << "\n"
 		$stdout.flush
-		
+
 	end
-	
+
 end
 
 class Point
@@ -407,7 +423,7 @@ class SpaceInfo
             yield( p )
         end
     end
-    
+
     def inspect
         to_s
     end
@@ -449,16 +465,17 @@ class ValidMovesArray
         @moves.include?( move )
     end
 
-    def intersects?( valids )
+    def intersects?( moves )
+        dsts = moves.map { |m| m.dst }
         each do |m|
-            return m if valids.include?( m )
+            return m if dsts.include?( m.dst )
         end
         return false
     end
 
-    
+
     def size
-        @moves.size - @moves.nils_count
+        @moves.nsize
     end
 
     def empty?
@@ -481,15 +498,26 @@ class ValidMovesArray
         "\n  > " + a.reject { |m| m.nil? }.join( "\n  > " )
     end
 
-    def choose
-        choose_optimal
+    def choose_anyway
+        return @moves.nfirst if size == 1
+        m = choose_optimal
+        if m.nil?
+            m = choose_random
+        end
+        think "Anyway choice is #{m}"
+        return m
+    end
+
+    def choose_random
+        return @moves.compact[ rand( size ) ]
     end
 
     def choose_optimal
 
-        sorted = @moves.sort
-        
-        #think "Choosing from: #{@moves}"
+        sorted = @moves.sort.compact
+        think "Choosing from: #{@moves}"
+
+        return nil if sorted.empty? || ( sorted.last.weight == sorted.first.weight )
         return sorted.last
     end
 
@@ -500,12 +528,12 @@ class ValidMovesArray
 end
 
 class Move
-    
+
     include Comparable
 
     BASE_WEIGHT = 1.0
 
-    attr_reader :src, :dst, :weights
+    attr_reader :src, :dst
 
     def initialize( map, source, destination_method_name = nil )
         @map = map
@@ -513,6 +541,7 @@ class Move
         dst_method = ( destination_method_name.nil? ) ? @src.method( dname ) : @src.method( destination_method_name )
         @dst = dst_method.call
         @weights = Array.new
+        @weight = nil
     end
 
     def self.cvalue
@@ -539,17 +568,20 @@ class Move
         @map.history << index
         @map.make_move( cvalue )
     end
-    
+
     def add_weight( w )
         @weights << w unless w.nil?
+        @weight = nil
     end
 
     def weight
-        res = BASE_WEIGHT
-        @weights.each do |w|
-            res = res * w
+        if @weight.nil?
+            @weight = BASE_WEIGHT
+            @weights.each do |w|
+                @weight = @weight * w
+            end
         end
-        return res
+        return @weight
     end
 
     def <=>( comp )
@@ -649,20 +681,25 @@ end
 class MirlordBot
 
 	def makemove
-	    
+
         @valids = my_valid_moves( @map )
 
 		if @valids.size == 0
-			@map.make_move( 0 )
-		else
-            collect_weights unless @valids.size < 2
+			@map.make_move( West.cvalue )
+        elsif @valids.size == 1
+            @valids.choose_anyway.make
+		else # @valids.size > 1
+            collect_weights
+            m = @valids.choose_optimal
 
-            m = @valids.choose
-            m = @valids[ rand(@valids.size) ] if m.nil? # sometimes we can't choose any move
+            if m.nil?
+                try_to_keep_direction
+                m = @valids.choose_anyway
+            end
 
 			m.make
 		end
-	
+
 	end
 
     def collect_weights
@@ -679,7 +716,7 @@ class MirlordBot
                 @valids[ m.index ].add_weight( 2.0 )
             end
         end
-        
+
         if @rival_presence
 
             me = @map.my_point
@@ -755,12 +792,17 @@ class MirlordBot
                     end
                 end
             elsif ( xd.abs + yd.abs ) == 1
+                think "Blocking?"
                 rvalids = rival_valid_moves( @map )
                 if rvalids.size == 1
+                    think "He has no chances!"
                     rvalids.each do |rm| # will be executed only once, but for only proper rival valid move
                         imap = @map.imagine( [], nil, [ rm.dst.x, rm.dst.y ] )
+                        think "He will go to #{rm.dst}"
                         irvalids = rival_valid_moves( imap ) # rival imagined valid moves
+                        think "And then to #{irvalids}"
                         blocking_move = @valids.intersects?( irvalids )
+                        think "I can block it by going to: #{blocking_move}"
                         @valids[ blocking_move.index ].add_weight( 1.8 )
                     end
                 end
@@ -775,12 +817,12 @@ class MirlordBot
             #try_to_predict_splits
 
         else
-            try_to_keep_hugging
+            #try_to_keep_hugging
 
             try_not_to_split
         end
 
-        try_to_keep_direction
+        #try_to_keep_direction
 
     end
 
@@ -820,9 +862,8 @@ class MirlordBot
                 ispaces, total = analyze_limited_space( imap, my_valid_moves( imap ) )
                 if ispaces.size > spaces.size
                     ispaces.sort!
-                    think "isp=#{ispaces.last.size.to_f}; total=#{total.to_f}"
-                    @valids[ m.index ].add_weight( ( ispaces.last.size.to_f / total.to_f ).abs  )
-                    @valids[ m.index ].add_weight( 0.7 )
+                    #think "isp=#{ispaces.last.size.to_f}; total=#{total.to_f}"
+                    @valids[ m.index ].add_weight( ( ispaces.last.size.to_f / total.to_f ) * 0.7 )
                 end
             end
         end
@@ -910,9 +951,9 @@ class MirlordBot
         @valids = nil
         @spaces_base = nil
         @spaces_total = nil
-	
+
 		while(true)
-		
+
             @map = TronMap.read_new( @history )
             makemove
 
@@ -921,9 +962,9 @@ class MirlordBot
             @spaces_base = nil
             @spaces_total = nil
 		end
-	
+
 	end
-	
+
 end
 
 MirlordBot.new()
