@@ -44,7 +44,15 @@ end
 class Array
 
     def nils_count
-        self.select { |e| e.nil? }.size
+        nindexes.size
+    end
+
+    def nindexes
+        r = []
+        self.each_index do |i|
+            r << i if self[i].nil?
+        end
+        return r
     end
 
     def only
@@ -473,7 +481,6 @@ class ValidMovesArray
         return false
     end
 
-
     def size
         @moves.nsize
     end
@@ -542,6 +549,8 @@ class Move
         @dst = dst_method.call
         @weights = Array.new
         @weight = nil
+
+        @dst_walls = (@src.x == @dst.x) ? [ @dst.west, @dst.east ] : [ @dst.north, @dst.south ]
     end
 
     def self.cvalue
@@ -601,15 +610,34 @@ class Move
         :"#{self.class.name.downcase}"
     end
 
-    def along_wall?
-        w1, w2 = walls
-        return true if dst.method( w1 ).call.wall? || dst.method( w2 ).call.wall?
-        return false
+    def walls_count
+        n = 0
+        @dst_walls.each do |p|
+            n += 1 if p.wall?
+        end
+        return n
+    end
+    private :walls_count
+
+    def wall_type
+        return :corner if walls_count == 1 && ! front_move.possible?
+        return :gate if walls_count == 2
+        return :single if walls_count == 1
+        return nil # otherwise
     end
 
+    def along_wall?
+        return true if walls_count > 0
+    end
+
+    def front_move
+        @front_move = self.class.new( @map, @dst ) if @front_move.nil?
+        return @front_move
+    end
+    private :front_move
+
     def has_front_points?
-        front_move = self.class.new( @map, @dst )
-        return true if ! front_move.possible? || front_move.along_wall?
+        return ( ! front_move.possible? || front_move.along_wall? ) ? true : false
     end
 
 end
@@ -624,10 +652,6 @@ class North < Move
         return 1
     end
 
-    def walls
-        [ :west, :east ]
-    end
-
 end
 
 class East < Move
@@ -638,10 +662,6 @@ class East < Move
 
     def self.cvalue
         return 2
-    end
-
-    def walls
-        [ :north, :south ]
     end
 
 end
@@ -656,10 +676,6 @@ class South < Move
         return 3
     end
 
-    def walls
-        [ :west, :east ]
-    end
-
 end
 
 class West < Move
@@ -670,10 +686,6 @@ class West < Move
 
     def self.cvalue
         return 4
-    end
-
-    def walls
-        [ :north, :south ]
     end
 
 end
@@ -689,6 +701,7 @@ class MirlordBot
         elsif @valids.size == 1
             @valids.choose_anyway.make
 		else # @valids.size > 1
+            @spaces_base, @spaces_total = analyze_limited_space( @map, @valids )
             collect_weights
             m = @valids.choose_optimal
 
@@ -704,7 +717,7 @@ class MirlordBot
 
     def collect_weights
 
-        spaces, _ = base_spaces
+        spaces = @spaces_base
         if spaces.size == 1 && @rival_presence
             check_rival_presence( @map, spaces.first )
         end
@@ -816,7 +829,7 @@ class MirlordBot
                 #try_to_predict_splits
 
             else
-                #try_to_keep_hugging
+                try_to_keep_hugging
 
                 try_not_to_split( @valids )
             end
@@ -854,7 +867,7 @@ class MirlordBot
     end
 
     def try_not_to_split( moves )
-        spaces, _ = base_spaces
+        spaces = @spaces_base
         moves.each do |m|
             if m.has_front_points?
                 #think "Trying not to split for: #{m}"
@@ -880,16 +893,24 @@ class MirlordBot
     end
 
     def try_to_keep_hugging
+        walls_found = false # flag
         @valids.each do |m|
-            if m.along_wall?
-                @valids[ m.index ].add_weight( 1.2 )
+            wt = m.wall_type
+            if ! wt.nil?
+                walls_found = true
+                @valids[ m.index ].add_weight( @wall_weights[ wt ] )
             end
+        end
+        if !walls_found
+            try_to_rotate
         end
     end
 
-    def base_spaces
-        @spaces_base, @spaces_total = analyze_limited_space( @map, @valids ) if @spaces_base.nil?
-        return @spaces_base, @spaces_total
+    def try_to_rotate
+        previous = @history.last
+        unless previous.nil?
+            @valids[ previous ].add_weight( 0.85 ) unless @valids[ previous ].nil?
+        end
     end
 
     def analyze_limited_space( map, valids )
@@ -932,11 +953,11 @@ class MirlordBot
             last_and_valid.uniq!
 
             if last_and_valid.size == 1 && last_and_valid[0] == previous
-                @valids[ previous ].add_weight 1.1
+                @valids[ previous ].add_weight( 1.1 ) unless @valids[ previous ].nil?
             elsif last_and_valid.size > 1 && last_and_valid[0] == previous
-                @valids[ previous ].add_weight 1.05
+                @valids[ previous ].add_weight( 1.05 ) unless @valids[ previous ].nil?
             elsif last_and_valid.include? previous
-                @valids[ previous ].add_weight 1.01
+                @valids[ previous ].add_weight( 1.01 ) unless @valids[ previous ].nil?
             end
         end
 
@@ -951,6 +972,7 @@ class MirlordBot
         @valids = nil
         @spaces_base = nil
         @spaces_total = nil
+        @wall_weights = { :single => 1.2, :gate => 1.3, :corner => 1.4 }
 
 		while(true)
 
